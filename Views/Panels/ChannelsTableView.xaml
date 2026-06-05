@@ -1,0 +1,78 @@
+<UserControl x:Class="NMEAReceiver.Views.Panels.ChannelsTableView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignHeight="300"
+             d:DesignWidth="900"
+             mc:Ignorable="d">
+    <GroupBox Header="Active Channels">
+        <DataGrid HorizontalScrollBarVisibility="Auto"
+                  IsReadOnly="False"
+                  ItemsSource="{Binding Channels}"
+                  SelectedItem="{Binding SelectedChannel}">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="40" IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.DeleteChannelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource IconDeleteButtonStyle}">
+                                <Path Width="12"
+                                      Height="13"
+                                      Data="M6,19 C6,20.1 6.9,21 8,21 L16,21 C17.1,21 18,20.1 18,19 L18,7 L6,7 Z M19,4 L15.5,4 L14.5,3 L9.5,3 L8.5,4 L5,4 L5,6 L19,6 Z"
+                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      Stretch="Uniform" />
+                            </Button>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Width="70"
+                                    Binding="{Binding PortName}"
+                                    Header="Port"
+                                    IsReadOnly="True" />
+                <DataGridTemplateColumn Width="90"
+                                        Header="Status"
+                                        IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="Dot"
+                                         Width="7"
+                                         Height="7"
+                                         Margin="0,0,6,0"
+                                         VerticalAlignment="Center"
+                                         Fill="#9CA3AF" />
+                                <TextBlock Text="{Binding Status}" />
+                            </StackPanel>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                    <Setter TargetName="Dot" Property="Fill" Value="#059669" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Width="80"
+                                    Binding="{Binding BaudRate}"
+                                    Header="Baud Rate"
+                                    IsReadOnly="True" />
+                <DataGridTextColumn Width="140"
+                                    Binding="{Binding UdpAddress}"
+                                    Header="UDP Address" />
+                <DataGridTextColumn Width="80"
+                                    Binding="{Binding UdpPort}"
+                                    Header="UDP Port" />
+                <DataGridTextColumn Width="110"
+                                    Binding="{Binding LastUpdated}"
+                                    Header="Updated"
+                                    IsReadOnly="True" />
+                <DataGridTextColumn Width="320"
+                                    Binding="{Binding LastSentence}"
+                                    Header="Last Sentence"
+                                    IsReadOnly="True" />
+
+            </DataGrid.Columns>
+        </DataGrid>
+    </GroupBox>
+</UserControl>

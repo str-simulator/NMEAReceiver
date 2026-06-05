@@ -1,0 +1,29 @@
+<Application x:Class="NMEAReceiver.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:panels="clr-namespace:NMEAReceiver.ViewModels.Panels"
+             xmlns:panelViews="clr-namespace:NMEAReceiver.Views.Panels">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Styles/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+
+            <DataTemplate DataType="{x:Type panels:ChannelSetupViewModel}">
+                <panelViews:ChannelSetupView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type panels:ChannelsTableViewModel}">
+                <panelViews:ChannelsTableView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type panels:SnapshotViewModel}">
+                <panelViews:SnapshotView />
+            </DataTemplate>
+
+            <DataTemplate DataType="{x:Type panels:DiagnosticViewModel}">
+                <panelViews:DiagnosticView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
