@@ -21,7 +21,7 @@
                 <!--  Baud ComboBox  -->
                 <ColumnDefinition Width="Auto" />
                 <!--  UDP label  -->
-                <ColumnDefinition Width="*" MinWidth="100" />
+                <ColumnDefinition Width="Auto" MinWidth="200" />
                 <!--  UDP Address  -->
                 <ColumnDefinition Width="Auto" />
                 <!--  colon  -->
@@ -29,7 +29,7 @@
                 <!--  UDP Port  -->
                 <ColumnDefinition Width="16" />
                 <!--  spacer  -->
-                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
                 <!--  Start  -->
                 <ColumnDefinition Width="Auto" />
                 <!--  Stop  -->
@@ -44,11 +44,11 @@
                       ItemsSource="{Binding AvailableComPorts}"
                       SelectedItem="{Binding SelectedComPort}" />
             <Button Grid.Column="2"
-                    Height="30"
                     Margin="6,0,20,0"
                     Command="{Binding RefreshComPortsCommand}"
                     Content="↻"
-                    FontSize="15"
+                    FontSize="16"
+                    Style="{StaticResource IconButtonStyle}"
                     ToolTip="Refresh available COM ports" />
 
             <TextBlock Grid.Column="3"
@@ -78,13 +78,15 @@
             <Button Grid.Column="11"
                     Margin="16,0,6,0"
                     Command="{Binding StartCommand}"
-                    Content="START"
-                    Style="{StaticResource PrimaryButtonStyle}" />
+                    Style="{StaticResource PrimaryButtonStyle}">
+                <TextBlock Foreground="White" Text="START" />
+            </Button>
             <Button Grid.Column="12"
                     Margin="0,0,6,0"
                     Command="{Binding StopCommand}"
-                    Content="STOP"
-                    Style="{StaticResource DangerButtonStyle}" />
+                    Style="{StaticResource DangerButtonStyle}">
+                <TextBlock Foreground="White" Text="STOP" />
+            </Button>
         </Grid>
     </Border>
 </UserControl>

@@ -67,7 +67,7 @@
                                     Binding="{Binding LastUpdated}"
                                     Header="Updated"
                                     IsReadOnly="True" />
-                <DataGridTextColumn Width="320"
+                <DataGridTextColumn Width="*"
                                     Binding="{Binding LastSentence}"
                                     Header="Last Sentence"
                                     IsReadOnly="True" />
