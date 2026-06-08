@@ -9,10 +9,12 @@
     <GroupBox Header="Active Channels">
         <DataGrid HorizontalScrollBarVisibility="Auto"
                   IsReadOnly="False"
-                  ItemsSource="{Binding Channels}"
+                  ItemsSource="{Binding ChannelsView}"
                   SelectedItem="{Binding SelectedChannel}">
             <DataGrid.Columns>
-                <DataGridTemplateColumn Width="40" IsReadOnly="True">
+                <DataGridTemplateColumn Width="40"
+                                        CanUserSort="False"
+                                        IsReadOnly="True">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.DeleteChannelCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
@@ -33,7 +35,8 @@
                                     IsReadOnly="True" />
                 <DataGridTemplateColumn Width="90"
                                         Header="Status"
-                                        IsReadOnly="True">
+                                        IsReadOnly="True"
+                                        SortMemberPath="Status">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">
@@ -53,14 +56,14 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Width="80"
+                <DataGridTextColumn Width="110"
                                     Binding="{Binding BaudRate}"
                                     Header="Baud Rate"
                                     IsReadOnly="True" />
                 <DataGridTextColumn Width="140"
                                     Binding="{Binding UdpAddress}"
                                     Header="UDP Address" />
-                <DataGridTextColumn Width="80"
+                <DataGridTextColumn Width="100"
                                     Binding="{Binding UdpPort}"
                                     Header="UDP Port" />
                 <DataGridTextColumn Width="110"
