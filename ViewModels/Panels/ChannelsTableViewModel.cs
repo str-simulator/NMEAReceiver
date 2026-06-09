@@ -25,7 +25,7 @@ public partial class ChannelsTableViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void DeleteChannel(ChannelRowViewModel channel) => _channelService.DeleteChannel(channel);
+    private void DeleteChannel(ChannelRowViewModel channel) => _channelService.DeleteChannel(channel.PortName);
 
     private void OnStorePropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

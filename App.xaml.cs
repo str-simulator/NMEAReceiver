@@ -20,7 +20,6 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        services.AddSingleton<MainStateStore>();
         services.AddSingleton<IComPortService, ComPortService>();
         services.AddSingleton<IIniPersistenceService, IniService>();
 
@@ -30,6 +29,7 @@ public partial class App : Application
         services.AddTransient<Func<IWinRs232cReceiverService>>(sp => () => sp.GetRequiredService<IWinRs232cReceiverService>());
 
         services.AddSingleton<IReceiverChannelService, ReceiverChannelService>();
+        services.AddSingleton<MainStateStore>();
 
         services.AddTransient<ChannelSetupViewModel>();
         services.AddTransient<ChannelsTableViewModel>();

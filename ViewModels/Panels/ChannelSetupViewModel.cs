@@ -73,14 +73,14 @@ public partial class ChannelSetupViewModel : ObservableObject
     private void Stop()
     {
         if (_store.SelectedChannel is null) { _store.AppendLog("No channel selected. Click a row in Active Channels first."); return; }
-        _channelService.StopChannel(_store.SelectedChannel);
+        _channelService.StopChannel(_store.SelectedChannel.PortName);
     }
 
     [RelayCommand]
     private void Delete()
     {
         if (_store.SelectedChannel is null) { _store.AppendLog("No channel selected. Click a row in Active Channels first."); return; }
-        _channelService.DeleteChannel(_store.SelectedChannel);
+        _channelService.DeleteChannel(_store.SelectedChannel.PortName);
     }
 
     [RelayCommand]
