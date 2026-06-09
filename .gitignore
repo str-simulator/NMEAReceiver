@@ -31,3 +31,6 @@ Desktop.ini
 # Claude Code
 .claude/
 CLAUDE.md
+# code-review-graph
+.code-review-graph/
+.mcp.json
