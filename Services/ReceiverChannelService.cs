@@ -10,18 +10,24 @@ namespace NMEAReceiver.Services;
 
 public sealed class ReceiverChannelService : IReceiverChannelService
 {
-    private readonly Dictionary<string, WinRs232cReceiverService> _receivers = new();
+    private readonly Dictionary<string, IWinRs232cReceiverService> _receivers = new();
     private readonly MainStateStore _store;
+    private readonly Func<IWinRs232cReceiverService> _receiverFactory;
 
-    public ReceiverChannelService(MainStateStore store) => _store = store;
+    public ReceiverChannelService(MainStateStore store, Func<IWinRs232cReceiverService> receiverFactory)
+    {
+        _store = store;
+        _receiverFactory = receiverFactory;
+    }
 
-    public void OpenChannel(string comPort, int baudRate, string udpAddress, int udpPort)
+    public void OpenChannel(string comPort, int baudRate, IReadOnlyList<(string address, int port)> udpDestinations)
     {
         var existing = _store.Channels.FirstOrDefault(c => c.PortName == comPort);
         if (existing is not null)
         {
             if (_receivers.TryGetValue(comPort, out var stale)) { stale.Dispose(); _receivers.Remove(comPort); }
             existing.PropertyChanged -= OnChannelPropertyChanged;
+            existing.UdpDestinations.CollectionChanged -= OnChannelUdpCollectionChanged;
             _store.Channels.Remove(existing);
         }
 
@@ -31,19 +37,18 @@ public sealed class ReceiverChannelService : IReceiverChannelService
             return;
         }
 
-        var channel = new ChannelRowViewModel(portNo, udpAddress, udpPort, baudRate);
-        channel.PropertyChanged += OnChannelPropertyChanged;
+        var channel = new ChannelRowViewModel(portNo, udpDestinations, baudRate);
+        WireChannelEvents(channel);
         _store.Channels.Add(channel);
 
         var config = new NmeaReceiverConfig
         {
             ComPortNo = portNo,
             BaudRate = baudRate,
-            IosSendPortNo = udpPort,
-            IosSendAddress = string.IsNullOrWhiteSpace(udpAddress) ? "127.0.0.1" : udpAddress.Trim(),
+            UdpEndpoints = udpDestinations.Select(d => (d.address, d.port)).ToList(),
         };
 
-        var receiver = new WinRs232cReceiverService();
+        var receiver = _receiverFactory();
         receiver.LogMessage += _store.AppendLog;
         receiver.SentenceReceived += OnSentenceReceived;
         receiver.SentenceInfoUpdated += OnSentenceInfoUpdated;
@@ -76,6 +81,7 @@ public sealed class ReceiverChannelService : IReceiverChannelService
             _receivers.Remove(channel.PortName);
         }
         channel.PropertyChanged -= OnChannelPropertyChanged;
+        channel.UdpDestinations.CollectionChanged -= OnChannelUdpCollectionChanged;
         _store.Channels.Remove(channel);
         UpdateStatus();
     }
@@ -87,24 +93,36 @@ public sealed class ReceiverChannelService : IReceiverChannelService
             if (!availablePorts.Contains(ch.PortName))
                 continue;
 
+            var destinations = ch.UdpDestinations.Count > 0
+                ? ch.UdpDestinations
+                : new List<(string, int)> { ("127.0.0.1", 20011) };
+
             if (ch.IsRunning)
             {
-                OpenChannel(ch.PortName, ch.BaudRate, ch.UdpAddress, ch.UdpPort);
+                OpenChannel(ch.PortName, ch.BaudRate, destinations);
             }
             else
             {
                 if (!int.TryParse(ch.PortName.Replace("COM", string.Empty, StringComparison.OrdinalIgnoreCase), out var portNo))
                     continue;
-                var row = new ChannelRowViewModel(portNo, ch.UdpAddress, ch.UdpPort, ch.BaudRate)
+                var row = new ChannelRowViewModel(portNo, destinations, ch.BaudRate)
                 {
                     IsRunning = false,
                     Status = "Stopped",
                 };
-                row.PropertyChanged += OnChannelPropertyChanged;
+                WireChannelEvents(row);
                 _store.Channels.Add(row);
                 UpdateStatus();
             }
         }
+    }
+
+    private void WireChannelEvents(ChannelRowViewModel channel)
+    {
+        channel.PropertyChanged += OnChannelPropertyChanged;
+        channel.UdpDestinations.CollectionChanged += OnChannelUdpCollectionChanged;
+        foreach (var dest in channel.UdpDestinations)
+            dest.PropertyChanged += (_, _) => OnChannelUdpDestinationChanged(channel);
     }
 
     private void UpdateStatus()
@@ -118,16 +136,8 @@ public sealed class ReceiverChannelService : IReceiverChannelService
 
     private void OnSentenceReceived(string channelName, string sentence)
     {
-        Application.Current.Dispatcher.Invoke(() =>
-        {
-            _store.RawSentence = sentence;
-            var ch = _store.Channels.FirstOrDefault(c => c.PortName == channelName);
-            if (ch is not null)
-            {
-                ch.LastSentence = sentence;
-                ch.LastUpdated = DateTime.Now.ToString("HH:mm:ss.fff");
-            }
-        });
+        var ch = _store.Channels.FirstOrDefault(c => c.PortName == channelName);
+        ch?.AppendRawLog(sentence);
     }
 
     private void OnSentenceInfoUpdated(string channelName, ST_IOSSEND_SENTENCE data)
@@ -161,45 +171,37 @@ public sealed class ReceiverChannelService : IReceiverChannelService
     private void OnChannelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (sender is not ChannelRowViewModel channel) return;
-        if (e.PropertyName != nameof(ChannelRowViewModel.UdpAddress) &&
-            e.PropertyName != nameof(ChannelRowViewModel.UdpPort)) return;
+        if (e.PropertyName != nameof(ChannelRowViewModel.UdpDestinations)) return;
         if (!channel.IsRunning) return;
 
-        ReconnectChannel(channel);
+        UpdateChannelUdpEndpoints(channel);
     }
 
-    private void ReconnectChannel(ChannelRowViewModel channel)
+    private void OnChannelUdpCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
     {
-        if (_receivers.TryGetValue(channel.PortName, out var old))
-        {
-            old.Dispose();
-            _receivers.Remove(channel.PortName);
-        }
+        var channel = _store.Channels.FirstOrDefault(c => c.UdpDestinations == sender);
+        if (channel is null || !channel.IsRunning) return;
 
-        _store.AppendLog($"{channel.PortName} UDP changed → {channel.UdpAddress}:{channel.UdpPort}, reconnecting...");
+        if (e.NewItems is not null)
+            foreach (UdpDestinationViewModel dest in e.NewItems)
+                dest.PropertyChanged += (_, _) => OnChannelUdpDestinationChanged(channel);
 
-        if (!int.TryParse(channel.PortName.Replace("COM", string.Empty, StringComparison.OrdinalIgnoreCase), out var portNo))
-            return;
+        UpdateChannelUdpEndpoints(channel);
+    }
 
-        var config = new NmeaReceiverConfig
-        {
-            ComPortNo = portNo,
-            BaudRate = channel.BaudRate,
-            IosSendPortNo = channel.UdpPort,
-            IosSendAddress = string.IsNullOrWhiteSpace(channel.UdpAddress) ? "127.0.0.1" : channel.UdpAddress.Trim(),
-        };
+    private void OnChannelUdpDestinationChanged(ChannelRowViewModel channel)
+    {
+        if (!channel.IsRunning) return;
+        UpdateChannelUdpEndpoints(channel);
+    }
 
-        var receiver = new WinRs232cReceiverService();
-        receiver.LogMessage += _store.AppendLog;
-        receiver.SentenceReceived += OnSentenceReceived;
-        receiver.SentenceInfoUpdated += OnSentenceInfoUpdated;
+    private void UpdateChannelUdpEndpoints(ChannelRowViewModel channel)
+    {
+        if (!_receivers.TryGetValue(channel.PortName, out var receiver)) return;
 
-        var opened = receiver.Open(config);
-        channel.IsRunning = opened;
-        channel.Status = opened ? "Running" : "Open failed";
-        _receivers[channel.PortName] = receiver;
-
-        UpdateStatus();
+        var endpoints = channel.UdpDestinations.Select(d => (d.Address, d.Port));
+        receiver.UpdateUdpEndpoints(endpoints);
+        _store.AppendLog($"{channel.PortName} UDP destinations updated → {channel.UdpDestinationsSummary}");
     }
 
     private static string DisplayChar(char c) => c == '\0' ? "(null)" : c.ToString();

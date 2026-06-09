@@ -48,8 +48,13 @@ public partial class ChannelSetupViewModel : ObservableObject
         {
             SelectedComPort = _store.AvailableComPorts.Contains(ch.PortName) ? ch.PortName : SelectedComPort;
             BaudRate = ch.BaudRate;
-            DefaultUdpAddress = ch.UdpAddress;
-            DefaultUdpPort = ch.UdpPort;
+
+            var first = ch.UdpDestinations.FirstOrDefault();
+            if (first is not null)
+            {
+                DefaultUdpAddress = first.Address;
+                DefaultUdpPort = first.Port;
+            }
         }
     }
 
@@ -61,7 +66,7 @@ public partial class ChannelSetupViewModel : ObservableObject
         var existing = _store.Channels.FirstOrDefault(c => c.PortName == SelectedComPort);
         if (existing?.IsRunning == true) { _store.AppendLog($"{SelectedComPort} is already running."); return; }
 
-        _channelService.OpenChannel(SelectedComPort, BaudRate, DefaultUdpAddress, DefaultUdpPort);
+        _channelService.OpenChannel(SelectedComPort, BaudRate, [(DefaultUdpAddress, DefaultUdpPort)]);
     }
 
     [RelayCommand]
@@ -76,6 +81,13 @@ public partial class ChannelSetupViewModel : ObservableObject
     {
         if (_store.SelectedChannel is null) { _store.AppendLog("No channel selected. Click a row in Active Channels first."); return; }
         _channelService.DeleteChannel(_store.SelectedChannel);
+    }
+
+    [RelayCommand]
+    private void AddUdpDestination()
+    {
+        if (_store.SelectedChannel is null) { _store.AppendLog("No channel selected. Click a row in Active Channels first."); return; }
+        _store.SelectedChannel.UdpDestinations.Add(new UdpDestinationViewModel(DefaultUdpAddress, DefaultUdpPort));
     }
 
     [RelayCommand]

@@ -12,7 +12,6 @@ public sealed partial class MainStateStore : ObservableObject
     [ObservableProperty] private ChannelRowViewModel? selectedChannel;
     [ObservableProperty] private bool isRunning;
     [ObservableProperty] private string statusText = "Status: Stopped";
-    [ObservableProperty] private string rawSentence = string.Empty;
     [ObservableProperty] private string sentenceSnapshot = string.Empty;
     [ObservableProperty] private string logText = string.Empty;
 

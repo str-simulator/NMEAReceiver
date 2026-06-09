@@ -1,25 +1,28 @@
 using NMEAReceiver.Interop;
 using NMEAReceiver.Models;
+using NMEAReceiver.Services.Interfaces;
 using System.Net;
 using System.Net.Sockets;
 
 namespace NMEAReceiver.Services;
 
-public sealed class IosSentenceSocketService : IDisposable
+public sealed class IosSentenceSocketService : IIosSentenceSocketService
 {
     private readonly object _sync = new();
+    private readonly List<IPEndPoint> _sendEndPoints = new();
 
     private UdpClient? _udpSocket;
-    private IPEndPoint? _sendEndPoint;
     private ST_IOSSEND_SENTENCE _sentenceData;
 
-    public void InitIOSSentenceSocket(NmeaReceiverConfig config)
+    public void InitIOSSentenceSocket(IEnumerable<(string address, int port)> endpoints)
     {
         lock (_sync)
         {
             CloseSocketInternal();
             _udpSocket = new UdpClient();
-            _sendEndPoint = new IPEndPoint(IPAddress.Parse(config.IosSendAddress), config.IosSendPortNo);
+            _sendEndPoints.Clear();
+            foreach (var (addr, port) in endpoints)
+                _sendEndPoints.Add(new IPEndPoint(IPAddress.Parse(addr), port));
         }
     }
 
@@ -43,11 +46,13 @@ public sealed class IosSentenceSocketService : IDisposable
     {
         lock (_sync)
         {
-            if (_udpSocket is null || _sendEndPoint is null)
+            if (_udpSocket is null || _sendEndPoints.Count == 0)
                 return false;
 
             var payload = StructMarshal.ToBytes(_sentenceData);
-            _udpSocket.Send(payload, payload.Length, _sendEndPoint);
+            foreach (var ep in _sendEndPoints)
+                _udpSocket.Send(payload, payload.Length, ep);
+
             return true;
         }
     }
@@ -64,6 +69,6 @@ public sealed class IosSentenceSocketService : IDisposable
     {
         _udpSocket?.Dispose();
         _udpSocket = null;
-        _sendEndPoint = null;
+        _sendEndPoints.Clear();
     }
 }

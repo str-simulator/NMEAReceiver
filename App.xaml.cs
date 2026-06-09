@@ -22,8 +22,14 @@ public partial class App : Application
 
         services.AddSingleton<MainStateStore>();
         services.AddSingleton<IComPortService, ComPortService>();
-        services.AddSingleton<IReceiverChannelService, ReceiverChannelService>();
         services.AddSingleton<IIniPersistenceService, IniService>();
+
+        services.AddTransient<INmeaSentenceProcessorService, NmeaSentenceProcessorService>();
+        services.AddTransient<IIosSentenceSocketService, IosSentenceSocketService>();
+        services.AddTransient<IWinRs232cReceiverService, WinRs232cReceiverService>();
+        services.AddTransient<Func<IWinRs232cReceiverService>>(sp => () => sp.GetRequiredService<IWinRs232cReceiverService>());
+
+        services.AddSingleton<IReceiverChannelService, ReceiverChannelService>();
 
         services.AddTransient<ChannelSetupViewModel>();
         services.AddTransient<ChannelsTableViewModel>();

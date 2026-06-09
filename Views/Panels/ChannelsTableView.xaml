@@ -60,21 +60,46 @@
                                     Binding="{Binding BaudRate}"
                                     Header="Baud Rate"
                                     IsReadOnly="True" />
-                <DataGridTextColumn Width="140"
-                                    Binding="{Binding UdpAddress}"
-                                    Header="UDP Address" />
-                <DataGridTextColumn Width="100"
-                                    Binding="{Binding UdpPort}"
-                                    Header="UDP Port" />
+                <DataGridTemplateColumn Width="150"
+                                        MinWidth="100"
+                                        Header="UDP Destinations"
+                                        IsReadOnly="True">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <ItemsControl ItemsSource="{Binding UdpDestinations}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,1,0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0"
+                                                       VerticalAlignment="Center"
+                                                       Text="{Binding Summary}" />
+                                            <Button Grid.Column="1"
+                                                    Margin="4,0,0,0"
+                                                    Command="{Binding DataContext.RemoveUdpDestinationCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource IconDeleteButtonStyle}"
+                                                    ToolTip="Remove this UDP destination">
+                                                <Path Width="10"
+                                                      Height="11"
+                                                      Data="M6,19 C6,20.1 6.9,21 8,21 L16,21 C17.1,21 18,20.1 18,19 L18,7 L6,7 Z M19,4 L15.5,4 L14.5,3 L9.5,3 L8.5,4 L5,4 L5,6 L19,6 Z"
+                                                      Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                                      Stretch="Uniform" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
                 <DataGridTextColumn Width="110"
                                     Binding="{Binding LastUpdated}"
                                     Header="Updated"
                                     IsReadOnly="True" />
-                <DataGridTextColumn Width="*"
-                                    Binding="{Binding LastSentence}"
-                                    Header="Last Sentence"
-                                    IsReadOnly="True" />
-
             </DataGrid.Columns>
         </DataGrid>
     </GroupBox>

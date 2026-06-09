@@ -31,8 +31,8 @@ public sealed class IniService : IIniPersistenceService
             lines.Add(string.Empty);
             lines.Add($"[Channel.{ch.PortName}]");
             lines.Add($"BaudRate={ch.BaudRate}");
-            lines.Add($"UdpAddress={ch.UdpAddress}");
-            lines.Add($"UdpPort={ch.UdpPort}");
+            for (int i = 0; i < ch.UdpDestinations.Count; i++)
+                lines.Add($"Udp{i}={ch.UdpDestinations[i].Address}:{ch.UdpDestinations[i].Port}");
             lines.Add($"IsRunning={ch.IsRunning}");
         }
 
@@ -90,12 +90,29 @@ public sealed class IniService : IIniPersistenceService
             {
                 switch (key)
                 {
-                    case "BaudRate": if (int.TryParse(value, out var b)) currentChannel.BaudRate = b; break;
-                    case "UdpAddress": currentChannel.UdpAddress = value; break;
-                    case "UdpPort": if (int.TryParse(value, out var p)) currentChannel.UdpPort = p; break;
-                    case "IsRunning": currentChannel.IsRunning = !value.Equals("false", StringComparison.OrdinalIgnoreCase); break;
+                    case "BaudRate":
+                        if (int.TryParse(value, out var b)) currentChannel.BaudRate = b;
+                        break;
+                    case "IsRunning":
+                        currentChannel.IsRunning = !value.Equals("false", StringComparison.OrdinalIgnoreCase);
+                        break;
+                    default:
+                        if (key.StartsWith("Udp", StringComparison.OrdinalIgnoreCase) && key.Length > 3
+                            && int.TryParse(key[3..], out _))
+                        {
+                            var colonIdx = value.LastIndexOf(':');
+                            if (colonIdx > 0 && int.TryParse(value[(colonIdx + 1)..], out var udpPort))
+                                currentChannel.UdpDestinations.Add((value[..colonIdx], udpPort));
+                        }
+                        break;
                 }
             }
+        }
+
+        foreach (var ch in result.Channels)
+        {
+            if (ch.UdpDestinations.Count == 0)
+                ch.UdpDestinations.Add(("127.0.0.1", 20011));
         }
 
         return result;
@@ -115,7 +132,6 @@ public sealed class IniChannelSettings
 {
     public string PortName { get; set; } = string.Empty;
     public int BaudRate { get; set; } = 38400;
-    public string UdpAddress { get; set; } = "127.0.0.1";
-    public int UdpPort { get; set; } = 20011;
+    public List<(string Address, int Port)> UdpDestinations { get; } = new();
     public bool IsRunning { get; set; } = true;
 }

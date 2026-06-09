@@ -52,14 +52,17 @@ public sealed class MainViewModel : IDisposable
             DefaultUdpPort = ChannelSetup.DefaultUdpPort,
         };
         foreach (var c in _store.Channels)
-            settings.Channels.Add(new IniChannelSettings
+        {
+            var ch = new IniChannelSettings
             {
                 PortName = c.PortName,
                 BaudRate = c.BaudRate,
-                UdpAddress = c.UdpAddress,
-                UdpPort = c.UdpPort,
                 IsRunning = c.IsRunning,
-            });
+            };
+            foreach (var d in c.UdpDestinations)
+                ch.UdpDestinations.Add((d.Address, d.Port));
+            settings.Channels.Add(ch);
+        }
         _iniService.Save(settings);
         _channelService.Dispose();
     }

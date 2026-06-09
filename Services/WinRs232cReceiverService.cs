@@ -1,16 +1,17 @@
 using NMEAReceiver.Models;
+using NMEAReceiver.Services.Interfaces;
 using System.IO.Ports;
 using System.Text;
 
 namespace NMEAReceiver.Services;
 
-public sealed class WinRs232cReceiverService : IDisposable
+public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
 {
     private readonly object _sync = new();
     private readonly byte[] _mData;
     private readonly int _nRcvMaxLen;
-    private readonly NmeaSentenceProcessorService _sentenceProcessor = new();
-    private readonly IosSentenceSocketService _udpSocket = new();
+    private readonly INmeaSentenceProcessorService _sentenceProcessor;
+    private readonly IIosSentenceSocketService _udpSocket;
 
     private SerialPort? _serialPort;
     private Task? _receiveTask;
@@ -21,10 +22,12 @@ public sealed class WinRs232cReceiverService : IDisposable
     public event Action<string, string>? SentenceReceived;
     public event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
 
-    public WinRs232cReceiverService(int nRcvMaxLen = 8192)
+    public WinRs232cReceiverService(INmeaSentenceProcessorService sentenceProcessor, IIosSentenceSocketService udpSocket, int nRcvMaxLen = 8192)
     {
         _nRcvMaxLen = nRcvMaxLen;
         _mData = new byte[_nRcvMaxLen + 1];
+        _sentenceProcessor = sentenceProcessor;
+        _udpSocket = udpSocket;
 
         _sentenceProcessor.SentenceReceived += (ch, s) => SentenceReceived?.Invoke(ch, s);
         _sentenceProcessor.SentenceInfoUpdated += (ch, data) =>
@@ -43,7 +46,7 @@ public sealed class WinRs232cReceiverService : IDisposable
                 return false;
 
             _config = config;
-            _udpSocket.InitIOSSentenceSocket(config);
+            _udpSocket.InitIOSSentenceSocket(config.UdpEndpoints);
 
             var portName = GetPortName();
             _serialPort = new SerialPort(portName)
@@ -75,8 +78,17 @@ public sealed class WinRs232cReceiverService : IDisposable
             _receiveCancel = new CancellationTokenSource();
             _receiveTask = Task.Run(() => ReceiveLoop(_receiveCancel.Token));
 
-            OnLog($"{portName} Open Success → UDP {config.IosSendAddress}:{config.IosSendPortNo}");
+            var udpDesc = string.Join(", ", config.UdpEndpoints.Select(e => $"{e.Address}:{e.Port}"));
+            OnLog($"{portName} Open Success → UDP {udpDesc}");
             return true;
+        }
+    }
+
+    public void UpdateUdpEndpoints(IEnumerable<(string address, int port)> endpoints)
+    {
+        lock (_sync)
+        {
+            _udpSocket.InitIOSSentenceSocket(endpoints);
         }
     }
 

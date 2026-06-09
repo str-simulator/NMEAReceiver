@@ -2,10 +2,11 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using NMEAReceiver.Models;
+using NMEAReceiver.Services.Interfaces;
 
 namespace NMEAReceiver.Services;
 
-public sealed class NmeaSentenceProcessorService : IDisposable
+public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
 {
     private readonly object _sync = new();
     private readonly byte[] _pData;
