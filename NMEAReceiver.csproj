@@ -6,10 +6,19 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="res\NMEAReceiver.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
+    <EmbeddedResource Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
+    <None Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
+    <Page Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
   </ItemGroup>
 
   <ItemGroup>

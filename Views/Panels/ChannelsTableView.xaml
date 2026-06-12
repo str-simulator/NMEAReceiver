@@ -29,9 +29,13 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Width="70"
+                <DataGridTextColumn Width="100"
                                     Binding="{Binding PortName}"
-                                    Header="Port"
+                                    Header="Input"
+                                    IsReadOnly="True" />
+                <DataGridTextColumn Width="80"
+                                    Binding="{Binding InputMode}"
+                                    Header="Mode"
                                     IsReadOnly="True" />
                 <DataGridTemplateColumn Width="90"
                                         Header="Status"
@@ -57,7 +61,7 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Width="110"
-                                    Binding="{Binding BaudRate}"
+                                    Binding="{Binding BaudRateDisplay}"
                                     Header="Baud Rate"
                                     IsReadOnly="True" />
                 <DataGridTemplateColumn Width="150"

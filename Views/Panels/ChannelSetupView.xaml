@@ -7,93 +7,90 @@
              d:DesignWidth="1280"
              mc:Ignorable="d">
     <Border Style="{StaticResource ToolbarContainerStyle}">
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto" />
-                <!--  COM label  -->
-                <ColumnDefinition Width="130" />
-                <!--  COM ComboBox  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  Refresh  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  Baud label  -->
-                <ColumnDefinition Width="110" />
-                <!--  Baud ComboBox  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  UDP label  -->
-                <ColumnDefinition Width="Auto" MinWidth="200" />
-                <!--  UDP Address  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  colon  -->
-                <ColumnDefinition Width="80" />
-                <!--  UDP Port  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  Add UDP button  -->
-                <ColumnDefinition Width="16" />
-                <!--  spacer  -->
-                <ColumnDefinition Width="*" />
-                <!--  flex spacer  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  Start  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  Stop  -->
-            </Grid.ColumnDefinitions>
+        <DockPanel LastChildFill="False">
+            <StackPanel VerticalAlignment="Center"
+                        DockPanel.Dock="Left"
+                        Orientation="Horizontal">
+                <TextBlock Margin="0,0,8,0"
+                           Style="{StaticResource ToolbarLabelTextStyle}"
+                           Text="Input" />
+                <RadioButton Margin="0,0,8,0"
+                             VerticalAlignment="Center"
+                             Content="Serial"
+                             GroupName="InputMode"
+                             IsChecked="{Binding IsSerialMode, Mode=TwoWay}" />
+                <RadioButton Margin="0,0,40,0"
+                             VerticalAlignment="Center"
+                             Content="UDP"
+                             GroupName="InputMode"
+                             IsChecked="{Binding IsUdpMode, Mode=TwoWay}" />
 
-            <TextBlock Grid.Column="0"
-                       Margin="0,0,8,0"
-                       Style="{StaticResource ToolbarLabelTextStyle}"
-                       Text="COM Port" />
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{Binding AvailableComPorts}"
-                      SelectedItem="{Binding SelectedComPort}" />
-            <Button Grid.Column="2"
-                    Margin="6,0,20,0"
-                    Command="{Binding RefreshComPortsCommand}"
-                    Content="↻"
-                    Style="{StaticResource IconButtonStyle}"
-                    ToolTip="Refresh available COM ports" />
+                <!--  Start Receive COM Port Settings  -->
+                <StackPanel Orientation="Horizontal" Visibility="{Binding IsSerialInputEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Margin="0,0,8,0"
+                               Style="{StaticResource ToolbarLabelTextStyle}"
+                               Text="COM Port" />
+                    <ComboBox Width="120"
+                              ItemsSource="{Binding AvailableComPorts}"
+                              SelectedItem="{Binding SelectedComPort}" />
+                    <Button Margin="6,0,16,0"
+                            Command="{Binding RefreshComPortsCommand}"
+                            Content="Refresh"
+                            ToolTip="Refresh available COM ports" />
+                    <TextBlock Margin="0,0,8,0"
+                               Style="{StaticResource ToolbarLabelTextStyle}"
+                               Text="Baud Rate" />
+                    <ComboBox Width="100"
+                              Margin="0,0,20,0"
+                              ItemsSource="{Binding AvailableBaudRates}"
+                              SelectedItem="{Binding BaudRate}" />
+                </StackPanel>
+                <!--  End Receive COM Port Settings  -->
 
-            <TextBlock Grid.Column="3"
-                       Margin="0,0,8,0"
-                       Style="{StaticResource ToolbarLabelTextStyle}"
-                       Text="Baud Rate" />
-            <ComboBox Grid.Column="4"
-                      Margin="0,0,20,0"
-                      ItemsSource="{Binding AvailableBaudRates}"
-                      SelectedItem="{Binding BaudRate}" />
+                <!--  Start Receive UDP Settings  -->
+                <StackPanel Orientation="Horizontal" Visibility="{Binding IsUdpInputEnabled, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Margin="0,0,8,0"
+                               Style="{StaticResource ToolbarLabelTextStyle}"
+                               Text="UDP Bind Port" />
+                    <TextBox Width="90"
+                             Margin="0,0,20,0"
+                             Text="{Binding UdpBindPort, UpdateSourceTrigger=PropertyChanged}" />
+                </StackPanel>
+                <!--  End Receive UDP Settings  -->
 
-            <TextBlock Grid.Column="5"
-                       Margin="0,0,8,0"
-                       Style="{StaticResource ToolbarLabelTextStyle}"
-                       Text="UDP Destination" />
-            <TextBox Grid.Column="6"
-                     Margin="0,0,4,0"
-                     Text="{Binding DefaultUdpAddress, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Grid.Column="7"
-                       Margin="0,0,4,0"
-                       FontWeight="SemiBold"
-                       Text=":" />
-            <TextBox Grid.Column="8" Text="{Binding DefaultUdpPort, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Margin="0,0,8,0"
+                           Style="{StaticResource ToolbarLabelTextStyle}"
+                           Text="UDP Destination" />
+                <TextBox Width="180"
+                         Margin="0,0,4,0"
+                         Text="{Binding DefaultUdpAddress, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBlock Margin="0,0,4,0"
+                           FontWeight="SemiBold"
+                           Text=":" />
+                <TextBox Width="80" Text="{Binding DefaultUdpPort, UpdateSourceTrigger=PropertyChanged}" />
 
-            <Button Grid.Column="9"
-                    Margin="6,0,0,0"
-                    Command="{Binding AddUdpDestinationCommand}"
-                    Content="+"
-                    Style="{StaticResource IconButtonStyle}"
-                    ToolTip="Add UDP destination to selected channel" />
 
-            <Button Grid.Column="13"
-                    Margin="16,0,6,0"
-                    Command="{Binding StartCommand}"
-                    Style="{StaticResource PrimaryButtonStyle}">
-                <TextBlock Foreground="White" Text="START" />
-            </Button>
-            <Button Grid.Column="14"
-                    Margin="0,0,6,0"
-                    Command="{Binding StopCommand}"
-                    Style="{StaticResource DangerButtonStyle}">
-                <TextBlock Foreground="White" Text="STOP" />
-            </Button>
-        </Grid>
+                <Button Margin="6,0,0,0"
+                        Command="{Binding AddUdpDestinationCommand}"
+                        Content="+"
+                        Style="{StaticResource IconButtonStyle}"
+                        ToolTip="Add UDP destination to current input channel" />
+            </StackPanel>
+
+            <StackPanel VerticalAlignment="Center"
+                        DockPanel.Dock="Right"
+                        Orientation="Horizontal">
+                <Button Margin="16,0,6,0"
+                        Command="{Binding StartCommand}"
+                        Style="{StaticResource PrimaryButtonStyle}">
+                    <TextBlock Foreground="White" Text="START" />
+                </Button>
+                <Button Margin="0,0,6,0"
+                        Command="{Binding StopCommand}"
+                        Style="{StaticResource DangerButtonStyle}">
+                    <TextBlock Foreground="White" Text="STOP" />
+                </Button>
+            </StackPanel>
+        </DockPanel>
     </Border>
 </UserControl>

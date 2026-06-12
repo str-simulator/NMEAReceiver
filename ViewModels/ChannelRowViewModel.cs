@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NMEAReceiver.Services;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -11,8 +12,11 @@ public partial class ChannelRowViewModel : ObservableObject
 {
     [ObservableProperty] private int portNo;
     [ObservableProperty] private string portName = string.Empty;
+    [NotifyPropertyChangedFor(nameof(BaudRateDisplay))]
+    [ObservableProperty] private ReceiverInputMode inputMode = ReceiverInputMode.Serial;
     [ObservableProperty] private string status = "Stopped";
     [ObservableProperty] private bool isRunning;
+    [NotifyPropertyChangedFor(nameof(BaudRateDisplay))]
     [ObservableProperty] private int baudRate = 38400;
     [ObservableProperty] private string lastUpdated = string.Empty;
     [ObservableProperty] private string rawLog = string.Empty;
@@ -24,10 +28,18 @@ public partial class ChannelRowViewModel : ObservableObject
             ? "(none)"
             : string.Join(", ", UdpDestinations.Select(d => d.Summary));
 
-    public ChannelRowViewModel(int portNo, IEnumerable<(string address, int port)>? udpDestinations = null, int baudRate = 38400)
+    public string BaudRateDisplay => InputMode == ReceiverInputMode.Udp ? "-" : BaudRate.ToString();
+
+    public ChannelRowViewModel(
+        string portName,
+        int portNo,
+        ReceiverInputMode inputMode,
+        IEnumerable<(string address, int port)>? udpDestinations = null,
+        int baudRate = 38400)
     {
         PortNo = portNo;
-        PortName = $"COM{portNo}";
+        PortName = portName;
+        InputMode = inputMode;
         BaudRate = baudRate;
 
         foreach (var (addr, p) in udpDestinations ?? new[] { ("127.0.0.1", 20011) })

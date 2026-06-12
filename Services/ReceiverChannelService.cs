@@ -7,7 +7,7 @@ public sealed class ReceiverChannelService : IReceiverChannelService
 {
     private readonly Func<IWinRs232cReceiverService> _receiverFactory;
     private readonly Dictionary<string, IWinRs232cReceiverService> _receivers = new();
-    private readonly HashSet<string> _allPortNames = new();
+    private readonly HashSet<string> _allChannelNames = new();
 
     public event Action<string, int, int, IReadOnlyList<(string address, int port)>, string>? ChannelAdded;
     public event Action<string>? ChannelStopped;
@@ -22,18 +22,31 @@ public sealed class ReceiverChannelService : IReceiverChannelService
         _receiverFactory = receiverFactory;
     }
 
-    public void OpenChannel(string comPort, int baudRate, IReadOnlyList<(string address, int port)> udpDestinations)
+    public void ConfigureChannel(NmeaReceiverConfig config)
     {
-        if (!int.TryParse(comPort.Replace("COM", string.Empty, StringComparison.OrdinalIgnoreCase), out var portNo))
+        if (!TryNormalizeConfig(config, out var normalized, out var channelName, out var portNo, out var error))
         {
-            LogMessage?.Invoke($"Invalid port name: {comPort}");
+            LogMessage?.Invoke(error);
             return;
         }
 
-        if (_receivers.TryGetValue(comPort, out var stale))
+        _allChannelNames.Add(channelName);
+        ChannelAdded?.Invoke(channelName, portNo, normalized.BaudRate, normalized.UdpEndpoints, "Stopped");
+        RaiseStatusChanged();
+    }
+
+    public void OpenChannel(NmeaReceiverConfig config)
+    {
+        if (!TryNormalizeConfig(config, out var normalized, out var channelName, out var portNo, out var error))
+        {
+            LogMessage?.Invoke(error);
+            return;
+        }
+
+        if (_receivers.TryGetValue(channelName, out var stale))
         {
             stale.Dispose();
-            _receivers.Remove(comPort);
+            _receivers.Remove(channelName);
         }
 
         var receiver = _receiverFactory();
@@ -41,24 +54,20 @@ public sealed class ReceiverChannelService : IReceiverChannelService
         receiver.SentenceReceived += (name, sentence) => SentenceReceived?.Invoke(name, sentence);
         receiver.SentenceInfoUpdated += (name, data) => SentenceInfoUpdated?.Invoke(name, data);
 
-        var config = new NmeaReceiverConfig
-        {
-            ComPortNo = portNo,
-            BaudRate = baudRate,
-            UdpEndpoints = udpDestinations.Select(d => (d.address, d.port)).ToList(),
-        };
-
-        var opened = receiver.Open(config);
+        var opened = receiver.Open(normalized);
         if (opened)
-            _receivers[comPort] = receiver;
+            _receivers[channelName] = receiver;
         else
             receiver.Dispose();
 
-        _allPortNames.Add(comPort);
-        ChannelAdded?.Invoke(comPort, portNo, baudRate, udpDestinations, opened ? "Running" : "Open failed");
+        _allChannelNames.Add(channelName);
+        var failStatus = normalized.InputMode == ReceiverInputMode.Udp ? "Bind failed" : "Open failed";
+        ChannelAdded?.Invoke(channelName, portNo, normalized.BaudRate, normalized.UdpEndpoints, opened ? "Running" : failStatus);
 
         if (!opened)
-            LogMessage?.Invoke($"Failed to open {comPort}");
+            LogMessage?.Invoke(normalized.InputMode == ReceiverInputMode.Udp
+                ? $"Failed to bind {channelName}"
+                : $"Failed to open {channelName}");
 
         RaiseStatusChanged();
     }
@@ -81,7 +90,7 @@ public sealed class ReceiverChannelService : IReceiverChannelService
             receiver.Dispose();
             _receivers.Remove(portName);
         }
-        _allPortNames.Remove(portName);
+        _allChannelNames.Remove(portName);
         ChannelDeleted?.Invoke(portName);
         RaiseStatusChanged();
     }
@@ -96,36 +105,114 @@ public sealed class ReceiverChannelService : IReceiverChannelService
     {
         foreach (var ch in channels)
         {
-            if (!availablePorts.Contains(ch.PortName))
+            var inputMode = ch.InputMode;
+            if (inputMode == ReceiverInputMode.Serial && ch.PortName.StartsWith("UDP:", StringComparison.OrdinalIgnoreCase))
+                inputMode = ReceiverInputMode.Udp;
+
+            var config = new NmeaReceiverConfig
+            {
+                InputMode = inputMode,
+                ComPortNo = TryParseComPortNo(ch.PortName, out var comPortNo) ? comPortNo : 0,
+                UdpBindPort = ch.UdpBindPort > 0
+                    ? ch.UdpBindPort
+                    : TryParseUdpBindPort(ch.PortName, out var bindPort) ? bindPort : 0,
+                BaudRate = ch.BaudRate,
+                UdpEndpoints = ch.UdpDestinations.Count > 0
+                    ? ch.UdpDestinations.Select(d => (d.Address, d.Port)).ToList()
+                    : new() { ("127.0.0.1", 20011) },
+            };
+
+            if (config.InputMode == ReceiverInputMode.Serial && !availablePorts.Contains(ch.PortName))
                 continue;
 
-            var destinations = ch.UdpDestinations.Count > 0
-                ? (IReadOnlyList<(string, int)>)ch.UdpDestinations.Select(d => (d.Address, d.Port)).ToList()
-                : new[] { ("127.0.0.1", 20011) };
-
             if (ch.IsRunning)
-            {
-                OpenChannel(ch.PortName, ch.BaudRate, destinations);
-            }
+                OpenChannel(config);
             else
-            {
-                if (!int.TryParse(ch.PortName.Replace("COM", string.Empty, StringComparison.OrdinalIgnoreCase), out var portNo))
-                    continue;
-
-                _allPortNames.Add(ch.PortName);
-                ChannelAdded?.Invoke(ch.PortName, portNo, ch.BaudRate, destinations, "Stopped");
-                RaiseStatusChanged();
-            }
+                ConfigureChannel(config);
         }
     }
 
     private void RaiseStatusChanged()
-        => StatusChanged?.Invoke(_receivers.Count, _allPortNames.Count);
+        => StatusChanged?.Invoke(_receivers.Count, _allChannelNames.Count);
 
     public void Dispose()
     {
         foreach (var r in _receivers.Values) r.Dispose();
         _receivers.Clear();
-        _allPortNames.Clear();
+        _allChannelNames.Clear();
+    }
+
+    private static bool TryNormalizeConfig(
+        NmeaReceiverConfig config,
+        out NmeaReceiverConfig normalized,
+        out string channelName,
+        out int portNo,
+        out string error)
+    {
+        normalized = new NmeaReceiverConfig
+        {
+            InputMode = config.InputMode,
+            ComPortNo = config.ComPortNo,
+            UdpBindPort = config.UdpBindPort,
+            BaudRate = config.BaudRate,
+            UdpEndpoints = config.UdpEndpoints.ToList(),
+        };
+        channelName = string.Empty;
+        portNo = 0;
+        error = string.Empty;
+
+        if (normalized.UdpEndpoints.Count == 0)
+            normalized.UdpEndpoints.Add(("127.0.0.1", 20011));
+
+        if (normalized.InputMode == ReceiverInputMode.Udp)
+        {
+            if (normalized.UdpBindPort is <= 0 or > 65535)
+            {
+                error = $"Invalid UDP bind port: {normalized.UdpBindPort}";
+                return false;
+            }
+
+            channelName = $"UDP:{normalized.UdpBindPort}";
+            portNo = normalized.UdpBindPort;
+            normalized.ComPortNo = 0;
+            normalized.BaudRate = 0;
+            return true;
+        }
+
+        if (normalized.ComPortNo <= 0)
+        {
+            error = "Invalid COM port.";
+            return false;
+        }
+
+        channelName = $"COM{normalized.ComPortNo}";
+        portNo = normalized.ComPortNo;
+        return true;
+    }
+
+    private static bool TryParseComPortNo(string value, out int portNo)
+    {
+        portNo = 0;
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var normalized = value.Trim();
+        if (normalized.StartsWith("COM", StringComparison.OrdinalIgnoreCase))
+            normalized = normalized[3..];
+
+        return int.TryParse(normalized, out portNo) && portNo > 0;
+    }
+
+    private static bool TryParseUdpBindPort(string value, out int port)
+    {
+        port = 0;
+        if (string.IsNullOrWhiteSpace(value))
+            return false;
+
+        var normalized = value.Trim();
+        if (normalized.StartsWith("UDP:", StringComparison.OrdinalIgnoreCase))
+            normalized = normalized[4..];
+
+        return int.TryParse(normalized, out port) && port is > 0 and <= 65535;
     }
 }

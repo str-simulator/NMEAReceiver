@@ -33,7 +33,9 @@ public sealed class MainViewModel : IDisposable
         Diagnostic = diagnostic;
 
         var saved = iniService.Load();
+        channelSetup.SelectedInputMode = saved.SelectedInputMode;
         if (saved.BaudRate > 0) channelSetup.BaudRate = saved.BaudRate;
+        if (saved.UdpBindPort > 0) channelSetup.UdpBindPort = saved.UdpBindPort;
         if (!string.IsNullOrWhiteSpace(saved.DefaultUdpAddress)) channelSetup.DefaultUdpAddress = saved.DefaultUdpAddress;
         if (saved.DefaultUdpPort > 0) channelSetup.DefaultUdpPort = saved.DefaultUdpPort;
         if (!string.IsNullOrWhiteSpace(saved.SelectedComPort) && store.AvailableComPorts.Contains(saved.SelectedComPort))
@@ -46,8 +48,10 @@ public sealed class MainViewModel : IDisposable
     {
         var settings = new IniSettings
         {
+            SelectedInputMode = ChannelSetup.SelectedInputMode,
             SelectedComPort = ChannelSetup.SelectedComPort ?? string.Empty,
             BaudRate = ChannelSetup.BaudRate,
+            UdpBindPort = ChannelSetup.UdpBindPort,
             DefaultUdpAddress = ChannelSetup.DefaultUdpAddress,
             DefaultUdpPort = ChannelSetup.DefaultUdpPort,
         };
@@ -55,8 +59,10 @@ public sealed class MainViewModel : IDisposable
         {
             var ch = new IniChannelSettings
             {
+                InputMode = c.InputMode,
                 PortName = c.PortName,
                 BaudRate = c.BaudRate,
+                UdpBindPort = c.InputMode == ReceiverInputMode.Udp ? c.PortNo : 0,
                 IsRunning = c.IsRunning,
             };
             foreach (var d in c.UdpDestinations)

@@ -4,7 +4,7 @@ namespace NMEAReceiver.Services.Interfaces;
 
 public interface IReceiverChannelService : IDisposable
 {
-    // (portName, portNo, baudRate, udpDestinations, status: "Running"/"Stopped"/"Open failed")
+    // (channelName, portNoOrBindPort, baudRate, udpDestinations, status: "Running"/"Stopped"/"Open failed"/"Bind failed")
     event Action<string, int, int, IReadOnlyList<(string address, int port)>, string>? ChannelAdded;
     event Action<string>? ChannelStopped;
     event Action<string>? ChannelDeleted;
@@ -14,7 +14,8 @@ public interface IReceiverChannelService : IDisposable
     // (openCount, totalCount)
     event Action<int, int>? StatusChanged;
 
-    void OpenChannel(string comPort, int baudRate, IReadOnlyList<(string address, int port)> udpDestinations);
+    void ConfigureChannel(NmeaReceiverConfig config);
+    void OpenChannel(NmeaReceiverConfig config);
     void StopChannel(string portName);
     void DeleteChannel(string portName);
     void UpdateChannelUdpEndpoints(string portName, IEnumerable<(string address, int port)> endpoints);

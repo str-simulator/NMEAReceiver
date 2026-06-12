@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using NMEAReceiver.Models;
+using NMEAReceiver.Services;
 using NMEAReceiver.Services.Interfaces;
 using NMEAReceiver.ViewModels;
 using System.Collections.ObjectModel;
@@ -49,13 +50,18 @@ public sealed partial class MainStateStore : ObservableObject
             if (existing is not null)
                 Channels.Remove(existing);
 
-            var channel = new ChannelRowViewModel(portNo, udpDestinations, baudRate)
+            var inputMode = portName.StartsWith("UDP:", StringComparison.OrdinalIgnoreCase)
+                ? ReceiverInputMode.Udp
+                : ReceiverInputMode.Serial;
+
+            var channel = new ChannelRowViewModel(portName, portNo, inputMode, udpDestinations, baudRate)
             {
                 IsRunning = status == "Running",
                 Status = status,
             };
             WireChannelEvents(channel);
             Channels.Add(channel);
+            SelectedChannel = channel;
         });
     }
 
@@ -120,7 +126,7 @@ public sealed partial class MainStateStore : ObservableObject
         if (!channel.IsRunning) return;
         var endpoints = channel.UdpDestinations.Select(d => (d.Address, d.Port));
         _channelService.UpdateChannelUdpEndpoints(channel.PortName, endpoints);
-        AppendLog($"{channel.PortName} UDP destinations updated → {channel.UdpDestinationsSummary}");
+        AppendLog($"{channel.PortName} UDP destinations updated -> {channel.UdpDestinationsSummary}");
     }
 
     private static void Dispatch(Action action)
