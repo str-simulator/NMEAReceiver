@@ -1,19 +1,18 @@
 using NMEAReceiver.Models;
 using NMEAReceiver.Services.Interfaces;
-using System.IO.Ports;
-using System.Text;
+using System.Net;
+using System.Net.Sockets;
 
 namespace NMEAReceiver.Services;
 
 public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
 {
     private readonly object _sync = new();
-    private readonly byte[] _mData;
     private readonly int _nRcvMaxLen;
     private readonly INmeaSentenceProcessorService _sentenceProcessor;
     private readonly IIosSentenceSocketService _udpSocket;
 
-    private SerialPort? _serialPort;
+    private UdpClient? _udpClient;
     private Task? _receiveTask;
     private CancellationTokenSource? _receiveCancel;
     private NmeaReceiverConfig? _config;
@@ -22,10 +21,12 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
     public event Action<string, string>? SentenceReceived;
     public event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
 
-    public WinRs232cReceiverService(INmeaSentenceProcessorService sentenceProcessor, IIosSentenceSocketService udpSocket, int nRcvMaxLen = 8192)
+    public WinRs232cReceiverService(
+        INmeaSentenceProcessorService sentenceProcessor,
+        IIosSentenceSocketService udpSocket,
+        int nRcvMaxLen = 8192)
     {
         _nRcvMaxLen = nRcvMaxLen;
-        _mData = new byte[_nRcvMaxLen + 1];
         _sentenceProcessor = sentenceProcessor;
         _udpSocket = udpSocket;
 
@@ -42,44 +43,31 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
     {
         lock (_sync)
         {
-            if (_serialPort is { IsOpen: true })
+            if (_udpClient is not null)
                 return false;
 
             _config = config;
             _udpSocket.InitIOSSentenceSocket(config.UdpEndpoints);
 
-            var portName = GetPortName();
-            _serialPort = new SerialPort(portName)
-            {
-                BaudRate = config.BaudRate,
-                DataBits = 8,
-                Parity = Parity.None,
-                StopBits = StopBits.One,
-                Handshake = Handshake.None,
-                DtrEnable = false,
-                RtsEnable = false,
-                ReadTimeout = 1000,
-                WriteTimeout = 1000,
-                Encoding = Encoding.ASCII
-            };
-
             try
             {
-                _serialPort.Open();
+                _udpClient = new UdpClient(AddressFamily.InterNetwork);
+                _udpClient.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                _udpClient.Client.Bind(new IPEndPoint(IPAddress.Any, config.UdpBindPort));
             }
             catch (Exception ex)
             {
-                _serialPort.Dispose();
-                _serialPort = null;
-                OnLog($"{portName} Open Fail: {ex.Message}");
+                _udpClient?.Dispose();
+                _udpClient = null;
+                OnLog($"{GetPortName()} Bind Fail: {ex.Message}");
                 return false;
             }
 
             _receiveCancel = new CancellationTokenSource();
-            _receiveTask = Task.Run(() => ReceiveLoop(_receiveCancel.Token));
+            _receiveTask = Task.Run(() => ReceiveLoopAsync(_receiveCancel.Token));
 
             var udpDesc = string.Join(", ", config.UdpEndpoints.Select(e => $"{e.Address}:{e.Port}"));
-            OnLog($"{portName} Open Success → UDP {udpDesc}");
+            OnLog($"{GetPortName()} Bind Success -> UDP {udpDesc}");
             return true;
         }
     }
@@ -97,6 +85,8 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
         lock (_sync)
         {
             _receiveCancel?.Cancel();
+            _udpClient?.Dispose();
+            _udpClient = null;
 
             try
             {
@@ -104,21 +94,12 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
             }
             catch
             {
-                // Keep close behavior tolerant.
+                // Closing the UDP socket is allowed to interrupt ReceiveAsync.
             }
 
             _receiveTask = null;
             _receiveCancel?.Dispose();
             _receiveCancel = null;
-
-            if (_serialPort is not null)
-            {
-                if (_serialPort.IsOpen)
-                    _serialPort.Close();
-
-                _serialPort.Dispose();
-                _serialPort = null;
-            }
 
             OnLog($"{GetPortName()} Close");
         }
@@ -128,63 +109,54 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
     {
         lock (_sync)
         {
-            return _serialPort is { IsOpen: true };
+            return _udpClient is not null;
         }
     }
 
-    public int GetPortNo()
-    {
-        return _config?.ComPortNo ?? 0;
-    }
+    public int GetPortNo() => _config?.UdpBindPort ?? 0;
 
     public string GetPortName()
     {
-        var portNo = GetPortNo();
-        return portNo > 0 ? $"COM{portNo}" : "COM?";
+        var port = GetPortNo();
+        return port > 0 ? $"UDP:{port}" : "UDP:?";
     }
 
-    private void ReceiveLoop(CancellationToken token)
+    private async Task ReceiveLoopAsync(CancellationToken token)
     {
         while (!token.IsCancellationRequested)
         {
-            SerialPort? serial;
+            UdpClient? udp;
             lock (_sync)
             {
-                serial = _serialPort;
+                udp = _udpClient;
             }
 
-            if (serial is null || !serial.IsOpen)
+            if (udp is null)
                 return;
 
             try
             {
-                if (serial.BytesToRead <= 0)
-                {
-                    Thread.Sleep(5);
+                var result = await udp.ReceiveAsync(token).ConfigureAwait(false);
+                var nSize = Math.Min(result.Buffer.Length, _nRcvMaxLen + 1);
+                if (nSize <= 0)
                     continue;
-                }
 
-                Thread.Sleep(250);
-                Array.Clear(_mData, 0, _mData.Length);
-
-                var readLength = Math.Min(_nRcvMaxLen + 1, Math.Max(1, serial.BytesToRead));
-                var nSize = serial.Read(_mData, 0, readLength);
-
-                if (nSize > 0)
-                {
-                    var frame = new byte[nSize];
-                    Buffer.BlockCopy(_mData, 0, frame, 0, nSize);
-                    _sentenceProcessor.Receive(GetPortName(), frame, nSize);
-                }
+                var frame = new byte[nSize];
+                Buffer.BlockCopy(result.Buffer, 0, frame, 0, nSize);
+                _sentenceProcessor.Receive(GetPortName(), frame, nSize);
             }
-            catch (TimeoutException)
+            catch (OperationCanceledException)
             {
-                // Keep loop alive.
+                return;
+            }
+            catch (ObjectDisposedException)
+            {
+                return;
             }
             catch (Exception ex)
             {
                 OnLog($"{GetPortName()} Receive Error: {ex.Message}");
-                Thread.Sleep(50);
+                await Task.Delay(50, token).ConfigureAwait(false);
             }
         }
     }

@@ -20,7 +20,6 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
-        services.AddSingleton<IComPortService, ComPortService>();
         services.AddSingleton<IIniPersistenceService, IniService>();
 
         services.AddTransient<INmeaSentenceProcessorService, NmeaSentenceProcessorService>();

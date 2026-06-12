@@ -31,7 +31,7 @@
                 </DataGridTemplateColumn>
                 <DataGridTextColumn Width="70"
                                     Binding="{Binding PortName}"
-                                    Header="Port"
+                                    Header="Input"
                                     IsReadOnly="True" />
                 <DataGridTemplateColumn Width="90"
                                         Header="Status"
@@ -56,10 +56,6 @@
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
-                <DataGridTextColumn Width="110"
-                                    Binding="{Binding BaudRate}"
-                                    Header="Baud Rate"
-                                    IsReadOnly="True" />
                 <DataGridTemplateColumn Width="150"
                                         MinWidth="100"
                                         Header="UDP Destinations"

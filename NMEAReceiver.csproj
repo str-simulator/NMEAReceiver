@@ -13,10 +13,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="Tools\**\*.cs" />
+    <EmbeddedResource Remove="Tools\**" />
+    <None Remove="Tools\**" />
+    <Page Remove="Tools\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="SharpVectors.Reloaded" Version="1.8.5" />
-    <PackageReference Include="System.IO.Ports" Version="10.0.0" />
   </ItemGroup>
 
 </Project>

@@ -14,7 +14,6 @@ public sealed partial class MainStateStore : ObservableObject
     private readonly IReceiverChannelService _channelService;
 
     public ObservableCollection<ChannelRowViewModel> Channels { get; } = new();
-    public ObservableCollection<string> AvailableComPorts { get; } = new();
 
     [ObservableProperty] private ChannelRowViewModel? selectedChannel;
     [ObservableProperty] private bool isRunning;
@@ -40,7 +39,7 @@ public sealed partial class MainStateStore : ObservableObject
         Dispatch(() => LogText += line);
     }
 
-    private void OnChannelAdded(string portName, int portNo, int baudRate,
+    private void OnChannelAdded(string portName, int portNo,
         IReadOnlyList<(string address, int port)> udpDestinations, string status)
     {
         Dispatch(() =>
@@ -49,13 +48,14 @@ public sealed partial class MainStateStore : ObservableObject
             if (existing is not null)
                 Channels.Remove(existing);
 
-            var channel = new ChannelRowViewModel(portNo, udpDestinations, baudRate)
+            var channel = new ChannelRowViewModel(portNo, udpDestinations)
             {
                 IsRunning = status == "Running",
                 Status = status,
             };
             WireChannelEvents(channel);
             Channels.Add(channel);
+            SelectedChannel = channel;
         });
     }
 
@@ -120,7 +120,7 @@ public sealed partial class MainStateStore : ObservableObject
         if (!channel.IsRunning) return;
         var endpoints = channel.UdpDestinations.Select(d => (d.Address, d.Port));
         _channelService.UpdateChannelUdpEndpoints(channel.PortName, endpoints);
-        AppendLog($"{channel.PortName} UDP destinations updated → {channel.UdpDestinationsSummary}");
+        AppendLog($"{channel.PortName} UDP destinations updated -> {channel.UdpDestinationsSummary}");
     }
 
     private static void Dispatch(Action action)

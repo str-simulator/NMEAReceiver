@@ -13,7 +13,6 @@ public partial class ChannelRowViewModel : ObservableObject
     [ObservableProperty] private string portName = string.Empty;
     [ObservableProperty] private string status = "Stopped";
     [ObservableProperty] private bool isRunning;
-    [ObservableProperty] private int baudRate = 38400;
     [ObservableProperty] private string lastUpdated = string.Empty;
     [ObservableProperty] private string rawLog = string.Empty;
 
@@ -24,11 +23,10 @@ public partial class ChannelRowViewModel : ObservableObject
             ? "(none)"
             : string.Join(", ", UdpDestinations.Select(d => d.Summary));
 
-    public ChannelRowViewModel(int portNo, IEnumerable<(string address, int port)>? udpDestinations = null, int baudRate = 38400)
+    public ChannelRowViewModel(int portNo, IEnumerable<(string address, int port)>? udpDestinations = null)
     {
         PortNo = portNo;
-        PortName = $"COM{portNo}";
-        BaudRate = baudRate;
+        PortName = $"UDP:{portNo}";
 
         foreach (var (addr, p) in udpDestinations ?? new[] { ("127.0.0.1", 20011) })
         {

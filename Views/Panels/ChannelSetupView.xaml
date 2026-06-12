@@ -10,85 +10,53 @@
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
-                <!--  COM label  -->
-                <ColumnDefinition Width="130" />
-                <!--  COM ComboBox  -->
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="24" />
                 <ColumnDefinition Width="Auto" />
-                <!--  Refresh  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  Baud label  -->
-                <ColumnDefinition Width="110" />
-                <!--  Baud ComboBox  -->
-                <ColumnDefinition Width="Auto" />
-                <!--  UDP label  -->
                 <ColumnDefinition Width="Auto" MinWidth="200" />
-                <!--  UDP Address  -->
                 <ColumnDefinition Width="Auto" />
-                <!--  colon  -->
                 <ColumnDefinition Width="80" />
-                <!--  UDP Port  -->
                 <ColumnDefinition Width="Auto" />
-                <!--  Add UDP button  -->
                 <ColumnDefinition Width="16" />
-                <!--  spacer  -->
                 <ColumnDefinition Width="*" />
-                <!--  flex spacer  -->
                 <ColumnDefinition Width="Auto" />
-                <!--  Start  -->
                 <ColumnDefinition Width="Auto" />
-                <!--  Stop  -->
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0"
                        Margin="0,0,8,0"
                        Style="{StaticResource ToolbarLabelTextStyle}"
-                       Text="COM Port" />
-            <ComboBox Grid.Column="1"
-                      ItemsSource="{Binding AvailableComPorts}"
-                      SelectedItem="{Binding SelectedComPort}" />
-            <Button Grid.Column="2"
-                    Margin="6,0,20,0"
-                    Command="{Binding RefreshComPortsCommand}"
-                    Content="↻"
-                    Style="{StaticResource IconButtonStyle}"
-                    ToolTip="Refresh available COM ports" />
+                       Text="UDP Bind Port" />
+            <TextBox Grid.Column="1"
+                     Text="{Binding UdpBindPort, UpdateSourceTrigger=PropertyChanged}" />
 
             <TextBlock Grid.Column="3"
                        Margin="0,0,8,0"
                        Style="{StaticResource ToolbarLabelTextStyle}"
-                       Text="Baud Rate" />
-            <ComboBox Grid.Column="4"
-                      Margin="0,0,20,0"
-                      ItemsSource="{Binding AvailableBaudRates}"
-                      SelectedItem="{Binding BaudRate}" />
-
-            <TextBlock Grid.Column="5"
-                       Margin="0,0,8,0"
-                       Style="{StaticResource ToolbarLabelTextStyle}"
                        Text="UDP Destination" />
-            <TextBox Grid.Column="6"
+            <TextBox Grid.Column="4"
                      Margin="0,0,4,0"
                      Text="{Binding DefaultUdpAddress, UpdateSourceTrigger=PropertyChanged}" />
-            <TextBlock Grid.Column="7"
+            <TextBlock Grid.Column="5"
                        Margin="0,0,4,0"
                        FontWeight="SemiBold"
                        Text=":" />
-            <TextBox Grid.Column="8" Text="{Binding DefaultUdpPort, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBox Grid.Column="6" Text="{Binding DefaultUdpPort, UpdateSourceTrigger=PropertyChanged}" />
 
-            <Button Grid.Column="9"
+            <Button Grid.Column="7"
                     Margin="6,0,0,0"
                     Command="{Binding AddUdpDestinationCommand}"
                     Content="+"
                     Style="{StaticResource IconButtonStyle}"
-                    ToolTip="Add UDP destination to selected channel" />
+                    ToolTip="Add UDP destination to current UDP bind port" />
 
-            <Button Grid.Column="13"
+            <Button Grid.Column="10"
                     Margin="16,0,6,0"
                     Command="{Binding StartCommand}"
                     Style="{StaticResource PrimaryButtonStyle}">
                 <TextBlock Foreground="White" Text="START" />
             </Button>
-            <Button Grid.Column="14"
+            <Button Grid.Column="11"
                     Margin="0,0,6,0"
                     Command="{Binding StopCommand}"
                     Style="{StaticResource DangerButtonStyle}">
