@@ -50,7 +50,6 @@
                     Margin="6,0,20,0"
                     Command="{Binding RefreshComPortsCommand}"
                     Content="↻"
-                    FontSize="16"
                     Style="{StaticResource IconButtonStyle}"
                     ToolTip="Refresh available COM ports" />
 
@@ -74,15 +73,12 @@
                        Margin="0,0,4,0"
                        FontWeight="SemiBold"
                        Text=":" />
-            <TextBox Grid.Column="8"
-                     Text="{Binding DefaultUdpPort, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBox Grid.Column="8" Text="{Binding DefaultUdpPort, UpdateSourceTrigger=PropertyChanged}" />
 
             <Button Grid.Column="9"
                     Margin="6,0,0,0"
                     Command="{Binding AddUdpDestinationCommand}"
                     Content="+"
-                    FontSize="16"
-                    FontWeight="Bold"
                     Style="{StaticResource IconButtonStyle}"
                     ToolTip="Add UDP destination to selected channel" />
 
