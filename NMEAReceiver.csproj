@@ -6,8 +6,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <AssemblyTitle>NMEA Receiver</AssemblyTitle>
+    <Product>NMEA Receiver</Product>
+    <ApplicationIcon>res\NMEAReceiver.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +20,10 @@
     <EmbeddedResource Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
     <None Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
     <Page Remove="bin\**;obj\**;.vs\**;.code-review-graph\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="res\NMEAReceiver.ico" />
   </ItemGroup>
 
   <ItemGroup>
