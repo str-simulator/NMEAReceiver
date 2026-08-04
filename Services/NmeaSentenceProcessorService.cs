@@ -10,6 +10,7 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
 {
     private readonly object _sync = new();
     private readonly byte[] _pData;
+    private readonly StringBuilder _ttmReceiveBuffer = new();
 
     private ST_IOSSEND_SENTENCE _stIOSSentenceData;
     private string _sentenceHTD = "--HTD,A,,R,R,R,,,,,,,,T,A,A,A,";
@@ -17,6 +18,7 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
 
     public event Action<string, string>? SentenceReceived;
     public event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
+    public event Action<string, TtmTargetData>? TtmTargetUpdated;
 
     public NmeaSentenceProcessorService(int nRcvMaxLen = 8192)
     {
@@ -34,6 +36,7 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
             SaveSentenceToLog(strSentence);
 
             SentenceReceived?.Invoke(channelName, strSentence);
+            ProcessTtmReceiveBuffer(channelName, strSentence);
             SetReviceSentence(channelName, strSentence);
 
             return nSize;
@@ -274,6 +277,161 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
         }
 
         return string.Equals(command, "S", StringComparison.OrdinalIgnoreCase) ? 1 : -1;
+    }
+
+    private void ProcessTtmReceiveBuffer(string channelName, string receivedText)
+    {
+        _ttmReceiveBuffer.Append(receivedText);
+
+        while (_ttmReceiveBuffer.Length > 0)
+        {
+            var sentenceStart = IndexOf(_ttmReceiveBuffer, '$', 0);
+            if (sentenceStart < 0)
+            {
+                _ttmReceiveBuffer.Clear();
+                return;
+            }
+
+            if (sentenceStart > 0)
+                _ttmReceiveBuffer.Remove(0, sentenceStart);
+
+            var lineEnd = IndexOf(_ttmReceiveBuffer, '\n', 0);
+            var nextSentenceStart = IndexOf(_ttmReceiveBuffer, '$', 1);
+            var checksumEnd = FindChecksumEnd(_ttmReceiveBuffer);
+
+            var sentenceLength = 0;
+            if (lineEnd >= 0 && (nextSentenceStart < 0 || lineEnd < nextSentenceStart))
+                sentenceLength = lineEnd + 1;
+            else if (checksumEnd > 0 &&
+                     (nextSentenceStart < 0 || checksumEnd <= nextSentenceStart))
+                sentenceLength = checksumEnd;
+            else if (nextSentenceStart > 0)
+                sentenceLength = nextSentenceStart;
+
+            if (sentenceLength == 0)
+            {
+                if (_ttmReceiveBuffer.Length > _pData.Length)
+                    _ttmReceiveBuffer.Clear();
+                return;
+            }
+
+            var sentence = _ttmReceiveBuffer.ToString(0, sentenceLength)
+                .Trim('\r', '\n', '\0', ' ');
+            _ttmReceiveBuffer.Remove(0, sentenceLength);
+
+            if (TryParseTtm(sentence, out var target))
+                TtmTargetUpdated?.Invoke(channelName, target);
+        }
+    }
+
+    private static bool TryParseTtm(string sentence, out TtmTargetData target)
+    {
+        target = null!;
+        if (string.IsNullOrWhiteSpace(sentence) || sentence[0] != '$')
+            return false;
+
+        var checksumIndex = sentence.IndexOf('*');
+        var body = sentence;
+        if (checksumIndex >= 0)
+        {
+            if (checksumIndex + 2 >= sentence.Length ||
+                !byte.TryParse(
+                    sentence.AsSpan(checksumIndex + 1, 2),
+                    NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture,
+                    out var expectedChecksum))
+            {
+                return false;
+            }
+
+            byte calculatedChecksum = 0;
+            for (var i = 1; i < checksumIndex; i++)
+                calculatedChecksum ^= (byte)sentence[i];
+
+            if (calculatedChecksum != expectedChecksum)
+                return false;
+
+            body = sentence[..checksumIndex];
+        }
+
+        var fields = body.Split(',');
+        if (fields.Length < 15 ||
+            !string.Equals(GetSentenceFormatter(fields[0]), nameof(Sentence.TTM), StringComparison.Ordinal) ||
+            !int.TryParse(fields[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var targetNumber) ||
+            targetNumber is < 0 or > 999)
+        {
+            return false;
+        }
+
+        target = new TtmTargetData
+        {
+            TargetNumber = targetNumber,
+            Distance = ParseNullableDouble(fields[2]),
+            Bearing = ParseNullableDouble(fields[3]),
+            BearingReference = ParseNullableChar(fields[4]),
+            Speed = ParseNullableDouble(fields[5]),
+            Course = ParseNullableDouble(fields[6]),
+            CourseReference = ParseNullableChar(fields[7]),
+            CpaDistance = ParseNullableDouble(fields[8]),
+            TimeToCpaMinutes = ParseNullableDouble(fields[9]),
+            Unit = ParseNullableChar(fields[10]),
+            TargetName = fields[11],
+            Status = ParseNullableChar(fields[12]),
+            IsReferenceTarget = string.Equals(fields[13], "R", StringComparison.OrdinalIgnoreCase),
+            DataTimeUtc = ParseUtcTime(fields[14]),
+            AcquisitionType = fields.Length > 15 ? ParseNullableChar(fields[15]) : null,
+            ReceivedAtUtc = DateTime.UtcNow,
+        };
+        return true;
+    }
+
+    private static double? ParseNullableDouble(string value)
+        => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : null;
+
+    private static char? ParseNullableChar(string value)
+        => string.IsNullOrWhiteSpace(value) ? null : char.ToUpperInvariant(value[0]);
+
+    private static TimeSpan? ParseUtcTime(string value)
+    {
+        if (!double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var numericTime))
+            return null;
+
+        var hours = (int)(numericTime / 10000);
+        var minutes = (int)(numericTime / 100) % 100;
+        var seconds = numericTime % 100;
+        if (hours is < 0 or > 23 || minutes is < 0 or > 59 || seconds is < 0 or >= 60)
+            return null;
+
+        return TimeSpan.FromHours(hours) +
+               TimeSpan.FromMinutes(minutes) +
+               TimeSpan.FromSeconds(seconds);
+    }
+
+    private static int FindChecksumEnd(StringBuilder source)
+    {
+        var checksumStart = IndexOf(source, '*', 0);
+        if (checksumStart < 0 || checksumStart + 2 >= source.Length)
+            return -1;
+
+        return IsHexDigit(source[checksumStart + 1]) && IsHexDigit(source[checksumStart + 2])
+            ? checksumStart + 3
+            : -1;
+    }
+
+    private static bool IsHexDigit(char value)
+        => value is >= '0' and <= '9' or >= 'A' and <= 'F' or >= 'a' and <= 'f';
+
+    private static int IndexOf(StringBuilder source, char value, int startIndex)
+    {
+        for (var i = startIndex; i < source.Length; i++)
+        {
+            if (source[i] == value)
+                return i;
+        }
+
+        return -1;
     }
 
     private static string ExtractSubString(string source, int index, char delimiter)

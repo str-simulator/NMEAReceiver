@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using NMEAReceiver.Models;
 using NMEAReceiver.ViewModels.Shell;
 using System.ComponentModel;
 
@@ -18,7 +19,12 @@ public partial class SnapshotViewModel : ObservableObject
     {
         if (e.PropertyName == nameof(MainStateStore.SentenceSnapshot))
             OnPropertyChanged(nameof(SentenceSnapshot));
+        else if (e.PropertyName == nameof(MainStateStore.SelectedChannel))
+            OnPropertyChanged(nameof(TtmTargets));
     }
 
     public string SentenceSnapshot => _store.SentenceSnapshot;
+    public IEnumerable<TtmTargetData> TtmTargets => _store.SelectedChannel?.TtmTargets is { } targets
+        ? targets
+        : Array.Empty<TtmTargetData>();
 }
