@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using NMEAReceiver.Models;
 using NMEAReceiver.Services;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -22,6 +23,7 @@ public partial class ChannelRowViewModel : ObservableObject
     [ObservableProperty] private string rawLog = string.Empty;
 
     public ObservableCollection<UdpDestinationViewModel> UdpDestinations { get; } = new();
+    public ObservableCollection<TtmTargetData> TtmTargets { get; } = new();
 
     public string UdpDestinationsSummary =>
         UdpDestinations.Count == 0
@@ -68,6 +70,34 @@ public partial class ChannelRowViewModel : ObservableObject
                 LastUpdated = DateTime.Now.ToString("HH:mm:ss.fff");
             });
         }
+    }
+
+    public void UpdateTtmTarget(TtmTargetData target)
+    {
+        var existingIndex = -1;
+        for (var i = 0; i < TtmTargets.Count; i++)
+        {
+            if (TtmTargets[i].TargetNumber == target.TargetNumber)
+            {
+                existingIndex = i;
+                break;
+            }
+        }
+
+        if (existingIndex >= 0)
+        {
+            TtmTargets[existingIndex] = target;
+            return;
+        }
+
+        var insertIndex = 0;
+        while (insertIndex < TtmTargets.Count &&
+               TtmTargets[insertIndex].TargetNumber < target.TargetNumber)
+        {
+            insertIndex++;
+        }
+
+        TtmTargets.Insert(insertIndex, target);
     }
 
     [RelayCommand(CanExecute = nameof(CanRemoveUdpDestination))]

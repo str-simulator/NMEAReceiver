@@ -12,7 +12,34 @@ public enum Sentence
     ALC,
     ARC,
     HBT,
-    ACN
+    ACN,
+    TTM
+}
+
+public sealed class TtmTargetData
+{
+    public int TargetNumber { get; init; }
+    public double? Distance { get; init; }
+    public double? Bearing { get; init; }
+    public char? BearingReference { get; init; }
+    public double? Speed { get; init; }
+    public double? Course { get; init; }
+    public char? CourseReference { get; init; }
+    public double? CpaDistance { get; init; }
+    public double? TimeToCpaMinutes { get; init; }
+    public char? Unit { get; init; }
+    public string TargetName { get; init; } = string.Empty;
+    public char? Status { get; init; }
+    public bool IsReferenceTarget { get; init; }
+    public TimeSpan? DataTimeUtc { get; init; }
+    public char? AcquisitionType { get; init; }
+    public DateTime ReceivedAtUtc { get; init; }
+
+    public string DataTimeDisplay => DataTimeUtc is { } time
+        ? time.ToString(@"hh\:mm\:ss\.ff", System.Globalization.CultureInfo.InvariantCulture)
+        : string.Empty;
+
+    public string ReceivedAtDisplay => ReceivedAtUtc.ToLocalTime().ToString("HH:mm:ss.fff");
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8, CharSet = CharSet.Unicode)]

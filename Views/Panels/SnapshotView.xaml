@@ -6,12 +6,72 @@
              d:DesignHeight="300"
              d:DesignWidth="380"
              mc:Ignorable="d">
-    <GroupBox Header="Parsed IOSSentence Snapshot">
-        <TextBox AcceptsReturn="True"
-                 IsReadOnly="True"
-                 Style="{StaticResource MonoTextBoxStyle}"
-                 Text="{Binding SentenceSnapshot, Mode=OneWay}"
-                 TextWrapping="NoWrap"
-                 VerticalScrollBarVisibility="Auto" />
-    </GroupBox>
+    <TabControl>
+        <TabItem Header="Parsed IOSSentence">
+            <TextBox AcceptsReturn="True"
+                     IsReadOnly="True"
+                     Style="{StaticResource MonoTextBoxStyle}"
+                     Text="{Binding SentenceSnapshot, Mode=OneWay}"
+                     TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto" />
+        </TabItem>
+
+        <TabItem Header="TTM Targets">
+            <DataGrid AutoGenerateColumns="False"
+                      HorizontalScrollBarVisibility="Auto"
+                      IsReadOnly="True"
+                      ItemsSource="{Binding TtmTargets}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Width="65"
+                                        Binding="{Binding TargetNumber}"
+                                        Header="Target" />
+                    <DataGridTextColumn Width="90"
+                                        Binding="{Binding TargetName}"
+                                        Header="Name" />
+                    <DataGridTextColumn Width="75"
+                                        Binding="{Binding Distance, StringFormat={}{0:F2}}"
+                                        Header="Distance" />
+                    <DataGridTextColumn Width="70"
+                                        Binding="{Binding Bearing, StringFormat={}{0:F1}}"
+                                        Header="Bearing" />
+                    <DataGridTextColumn Width="45"
+                                        Binding="{Binding BearingReference}"
+                                        Header="B Ref" />
+                    <DataGridTextColumn Width="65"
+                                        Binding="{Binding Speed, StringFormat={}{0:F2}}"
+                                        Header="Speed" />
+                    <DataGridTextColumn Width="65"
+                                        Binding="{Binding Course, StringFormat={}{0:F1}}"
+                                        Header="Course" />
+                    <DataGridTextColumn Width="45"
+                                        Binding="{Binding CourseReference}"
+                                        Header="C Ref" />
+                    <DataGridTextColumn Width="65"
+                                        Binding="{Binding CpaDistance, StringFormat={}{0:F2}}"
+                                        Header="CPA" />
+                    <DataGridTextColumn Width="65"
+                                        Binding="{Binding TimeToCpaMinutes, StringFormat={}{0:F1}}"
+                                        Header="TCPA" />
+                    <DataGridTextColumn Width="45"
+                                        Binding="{Binding Unit}"
+                                        Header="Unit" />
+                    <DataGridTextColumn Width="50"
+                                        Binding="{Binding Status}"
+                                        Header="Status" />
+                    <DataGridCheckBoxColumn Width="55"
+                                            Binding="{Binding IsReferenceTarget}"
+                                            Header="Ref" />
+                    <DataGridTextColumn Width="90"
+                                        Binding="{Binding DataTimeDisplay}"
+                                        Header="UTC" />
+                    <DataGridTextColumn Width="55"
+                                        Binding="{Binding AcquisitionType}"
+                                        Header="Acq" />
+                    <DataGridTextColumn Width="95"
+                                        Binding="{Binding ReceivedAtDisplay}"
+                                        Header="Received" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </TabItem>
+    </TabControl>
 </UserControl>
