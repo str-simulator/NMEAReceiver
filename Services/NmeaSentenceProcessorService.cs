@@ -68,58 +68,77 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
             ? strRecvSentence[..255]
             : strRecvSentence;
 
+        var hasSentenceInfoUpdate = false;
         var ncount = strRecvSentence.Count(c => c == '$');
 
         for (var i = 0; i <= ncount; i++)
         {
             var strSentence = ExtractSubString(strRecvSentence, i, '$');
+            var formatter = GetSentenceFormatter(strSentence);
 
-            if (strSentence.Contains("HTD", StringComparison.Ordinal))
+            switch (formatter)
             {
-                strSentence = "$" + strSentence;
-                SetSentenceData((int)Sentence.HTD, strSentence);
-            }
-            else if (strSentence.Contains("RSA", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.RSA, strSentence);
-            }
-            else if (strSentence.Contains("ROR", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.ROR, strSentence);
-            }
-            else if (strSentence.Contains("PYDKN", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.PYDKN, strSentence);
-            }
-            else if (strSentence.Contains("ALF", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.ALF, strSentence);
-            }
-            else if (strSentence.Contains("ALC", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.ALC, strSentence);
-            }
-            else if (strSentence.Contains("ARC", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.ARC, strSentence);
-            }
-            else if (strSentence.Contains("ACN", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.ACN, strSentence);
-            }
-            else if (strSentence.Contains("HBT", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.HBT, strSentence);
-            }
-            else if (strSentence.Contains("GGA", StringComparison.Ordinal))
-            {
-                SetSentenceData((int)Sentence.HBT, strSentence);
+                case nameof(Sentence.HTD):
+                    strSentence = "$" + strSentence;
+                    SetSentenceData((int)Sentence.HTD, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.RSA):
+                    SetSentenceData((int)Sentence.RSA, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.ROR):
+                    SetSentenceData((int)Sentence.ROR, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.PYDKN):
+                    SetSentenceData((int)Sentence.PYDKN, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.ALF):
+                    SetSentenceData((int)Sentence.ALF, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.ALC):
+                    SetSentenceData((int)Sentence.ALC, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.ARC):
+                    SetSentenceData((int)Sentence.ARC, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.ACN):
+                    SetSentenceData((int)Sentence.ACN, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case nameof(Sentence.HBT):
+                    SetSentenceData((int)Sentence.HBT, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
+                case "GGA":
+                    SetSentenceData((int)Sentence.HBT, strSentence);
+                    hasSentenceInfoUpdate = true;
+                    break;
             }
 
             Thread.Sleep(10);
         }
 
-        SentenceInfoUpdated?.Invoke(channelName, _stIOSSentenceData);
+        if (hasSentenceInfoUpdate)
+            SentenceInfoUpdated?.Invoke(channelName, _stIOSSentenceData);
+    }
+
+    private static string GetSentenceFormatter(string sentence)
+    {
+        var header = sentence.TrimStart('$', '!');
+        var delimiterIndex = header.IndexOfAny(new[] { ',', '*', '\r', '\n' });
+        if (delimiterIndex >= 0)
+            header = header[..delimiterIndex];
+
+        if (header.StartsWith('P'))
+            return header.ToUpperInvariant();
+
+        return header.Length >= 3 ? header[^3..].ToUpperInvariant() : string.Empty;
     }
 
     public void SetSentenceData(int nSentence, string strSentence)
