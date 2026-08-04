@@ -116,8 +116,6 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
                     hasSentenceInfoUpdate = true;
                     break;
             }
-
-            Thread.Sleep(10);
         }
 
         if (hasSentenceInfoUpdate)
