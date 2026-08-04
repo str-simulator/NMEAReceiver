@@ -115,10 +115,6 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
                     SetSentenceData((int)Sentence.HBT, strSentence);
                     hasSentenceInfoUpdate = true;
                     break;
-                case "GGA":
-                    SetSentenceData((int)Sentence.HBT, strSentence);
-                    hasSentenceInfoUpdate = true;
-                    break;
             }
 
             Thread.Sleep(10);
