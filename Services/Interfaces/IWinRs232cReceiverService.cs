@@ -7,6 +7,7 @@ public interface IWinRs232cReceiverService : IDisposable
     event Action<string>? LogMessage;
     event Action<string, string>? SentenceReceived;
     event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
+    event Action<string, TtmTargetData>? TtmTargetUpdated;
 
     bool Open(NmeaReceiverConfig config);
     void UpdateUdpEndpoints(IEnumerable<(string address, int port)> endpoints);

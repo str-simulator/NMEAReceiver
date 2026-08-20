@@ -10,6 +10,7 @@ public interface IReceiverChannelService : IDisposable
     event Action<string>? ChannelDeleted;
     event Action<string, string>? SentenceReceived;
     event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
+    event Action<string, TtmTargetData>? TtmTargetUpdated;
     event Action<string>? LogMessage;
     // (openCount, totalCount)
     event Action<int, int>? StatusChanged;

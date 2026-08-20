@@ -31,6 +31,7 @@ public sealed partial class MainStateStore : ObservableObject
         channelService.ChannelDeleted += OnChannelDeleted;
         channelService.SentenceReceived += OnSentenceReceived;
         channelService.SentenceInfoUpdated += OnSentenceInfoUpdated;
+        channelService.TtmTargetUpdated += OnTtmTargetUpdated;
         channelService.LogMessage += AppendLog;
         channelService.StatusChanged += OnStatusChanged;
     }
@@ -95,6 +96,15 @@ public sealed partial class MainStateStore : ObservableObject
     private void OnSentenceInfoUpdated(string portName, ST_IOSSEND_SENTENCE data)
     {
         Dispatch(() => SentenceSnapshot = BuildSnapshot(portName, data));
+    }
+
+    private void OnTtmTargetUpdated(string portName, TtmTargetData target)
+    {
+        Dispatch(() =>
+        {
+            var channel = Channels.FirstOrDefault(c => c.PortName == portName);
+            channel?.UpdateTtmTarget(target);
+        });
     }
 
     private void OnStatusChanged(int openCount, int totalCount)
