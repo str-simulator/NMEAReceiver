@@ -11,6 +11,8 @@ namespace NMEAReceiver.ViewModels;
 
 public partial class ChannelRowViewModel : ObservableObject
 {
+    private const int MaxRawLogLength = 200_000;
+
     [ObservableProperty] private int portNo;
     [ObservableProperty] private string portName = string.Empty;
     [NotifyPropertyChangedFor(nameof(BaudRateDisplay))]
@@ -57,19 +59,18 @@ public partial class ChannelRowViewModel : ObservableObject
     public void AppendRawLog(string sentence)
     {
         var line = $"[{DateTime.Now:HH:mm:ss.fff}] {sentence}{Environment.NewLine}";
-        if (Application.Current.Dispatcher.CheckAccess())
+
+        void Apply()
         {
-            RawLog += line;
+            var text = RawLog + line;
+            RawLog = text.Length > MaxRawLogLength ? text[^MaxRawLogLength..] : text;
             LastUpdated = DateTime.Now.ToString("HH:mm:ss.fff");
         }
+
+        if (Application.Current.Dispatcher.CheckAccess())
+            Apply();
         else
-        {
-            Application.Current.Dispatcher.Invoke(() =>
-            {
-                RawLog += line;
-                LastUpdated = DateTime.Now.ToString("HH:mm:ss.fff");
-            });
-        }
+            Application.Current.Dispatcher.Invoke(Apply);
     }
 
     public void UpdateTtmTarget(TtmTargetData target)
