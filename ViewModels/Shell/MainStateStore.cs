@@ -172,6 +172,11 @@ public sealed partial class MainStateStore : ObservableObject
         sb.AppendLine($"ACN Command : {DisplayChar(s.m_stSentenceACN.szAlertCommand)}");
         sb.AppendLine($"HBT Interval : {s.m_stSentenceHBT.nConfiguredRepeatInterval}");
         sb.AppendLine($"HBT Status : {DisplayChar(s.m_stSentenceHBT.szEquipmentStatus)}");
+        sb.AppendLine($"RPM Source : {DisplayChar(s.m_stSentenceRPM.szSource)}");
+        sb.AppendLine($"RPM ShaftNo : {s.m_stSentenceRPM.nEngineOrShaftNumber}");
+        sb.AppendLine($"RPM Speed : {s.m_stSentenceRPM.dSpeed}");
+        sb.AppendLine($"RPM Pitch : {s.m_stSentenceRPM.dPropellerPitch}");
+        sb.AppendLine($"RPM Status : {DisplayChar(s.m_stSentenceRPM.szStatus)}");
         return sb.ToString();
     }
 

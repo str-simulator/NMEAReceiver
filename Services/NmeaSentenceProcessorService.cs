@@ -118,6 +118,10 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
                     SetSentenceData((int)Sentence.HBT, strSentence);
                     updatedSentences.Add(Sentence.HBT);
                     break;
+                case nameof(Sentence.RPM):
+                    SetSentenceData((int)Sentence.RPM, strSentence);
+                    updatedSentences.Add(Sentence.RPM);
+                    break;
             }
         }
 
@@ -258,6 +262,14 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
                 _stIOSSentenceData.m_stSentenceHBT.nConfiguredRepeatInterval = GetIntField(strSentence, 1, ',');
                 _stIOSSentenceData.m_stSentenceHBT.szEquipmentStatus = GetCharField(strSentence, 2, ',');
                 _stIOSSentenceData.m_stSentenceHBT.nSequentialSentenceIdentifier = GetIntField(strSentence, 3, ',');
+                break;
+
+            case Sentence.RPM:
+                _stIOSSentenceData.m_stSentenceRPM.szSource = GetCharField(strSentence, 1, ',');
+                _stIOSSentenceData.m_stSentenceRPM.nEngineOrShaftNumber = (int)GetDoubleField(strSentence, 2, ',');
+                _stIOSSentenceData.m_stSentenceRPM.dSpeed = GetDoubleField(strSentence, 3, ',');
+                _stIOSSentenceData.m_stSentenceRPM.dPropellerPitch = GetDoubleField(strSentence, 4, ',');
+                _stIOSSentenceData.m_stSentenceRPM.szStatus = GetCharField(strSentence, 5, ',');
                 break;
 
             default:
