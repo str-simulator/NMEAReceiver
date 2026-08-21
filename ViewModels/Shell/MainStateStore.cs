@@ -12,6 +12,8 @@ namespace NMEAReceiver.ViewModels.Shell;
 
 public sealed partial class MainStateStore : ObservableObject
 {
+    private const int MaxLogLength = 200_000;
+
     private readonly IReceiverChannelService _channelService;
 
     public ObservableCollection<ChannelRowViewModel> Channels { get; } = new();
@@ -39,7 +41,11 @@ public sealed partial class MainStateStore : ObservableObject
     public void AppendLog(string message)
     {
         var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}";
-        Dispatch(() => LogText += line);
+        Dispatch(() =>
+        {
+            var text = LogText + line;
+            LogText = text.Length > MaxLogLength ? text[^MaxLogLength..] : text;
+        });
     }
 
     private void OnChannelAdded(string portName, int portNo, int baudRate,
