@@ -78,6 +78,7 @@ public sealed class IosSentenceSocketService : IIosSentenceSocketService
         Sentence.ARC => StructMarshal.ToBytes(data.m_stSentenceARC),
         Sentence.ACN => StructMarshal.ToBytes(data.m_stSentenceACN),
         Sentence.HBT => StructMarshal.ToBytes(data.m_stSentenceHBT),
+        Sentence.RPM => StructMarshal.ToBytes(data.m_stSentenceRPM),
         _ => throw new ArgumentOutOfRangeException(nameof(sentence), sentence, "No IOS block body defined for this sentence type."),
     };
 

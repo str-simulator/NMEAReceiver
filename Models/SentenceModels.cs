@@ -13,6 +13,7 @@ public enum Sentence
     ARC,
     HBT,
     ACN,
+    RPM,
     TTM
 }
 
@@ -151,6 +152,16 @@ public struct ST_HBT_SENTENCE
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8, CharSet = CharSet.Unicode)]
+public struct ST_RPM_SENTENCE
+{
+    [MarshalAs(UnmanagedType.U2)] public char szSource;
+    public int nEngineOrShaftNumber;
+    public double dSpeed;
+    public double dPropellerPitch;
+    [MarshalAs(UnmanagedType.U2)] public char szStatus;
+}
+
+[StructLayout(LayoutKind.Sequential, Pack = 8, CharSet = CharSet.Unicode)]
 public struct ST_IOSSEND_SENTENCE
 {
     public ST_HTD_SENTENCE m_stSentenceHTD;
@@ -162,6 +173,7 @@ public struct ST_IOSSEND_SENTENCE
     public ST_ARC_SENTENCE m_stSentenceARC;
     public ST_ACN_SENTENCE m_stSentenceACN;
     public ST_HBT_SENTENCE m_stSentenceHBT;
+    public ST_RPM_SENTENCE m_stSentenceRPM;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 8, CharSet = CharSet.Unicode)]
