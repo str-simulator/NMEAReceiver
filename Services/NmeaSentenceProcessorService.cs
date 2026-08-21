@@ -17,7 +17,7 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
     private string _sentenceTest = string.Empty;
 
     public event Action<string, string>? SentenceReceived;
-    public event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
+    public event Action<string, ST_IOSSEND_SENTENCE, IReadOnlyList<Sentence>>? SentenceInfoUpdated;
     public event Action<string, TtmTargetData>? TtmTargetUpdated;
 
     public NmeaSentenceProcessorService(int nRcvMaxLen = 8192)
@@ -71,7 +71,7 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
             ? strRecvSentence[..255]
             : strRecvSentence;
 
-        var hasSentenceInfoUpdate = false;
+        var updatedSentences = new List<Sentence>();
         var ncount = strRecvSentence.Count(c => c == '$');
 
         for (var i = 0; i <= ncount; i++)
@@ -84,45 +84,45 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
                 case nameof(Sentence.HTD):
                     strSentence = "$" + strSentence;
                     SetSentenceData((int)Sentence.HTD, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.HTD);
                     break;
                 case nameof(Sentence.RSA):
                     SetSentenceData((int)Sentence.RSA, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.RSA);
                     break;
                 case nameof(Sentence.ROR):
                     SetSentenceData((int)Sentence.ROR, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.ROR);
                     break;
                 case nameof(Sentence.PYDKN):
                     SetSentenceData((int)Sentence.PYDKN, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.PYDKN);
                     break;
                 case nameof(Sentence.ALF):
                     SetSentenceData((int)Sentence.ALF, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.ALF);
                     break;
                 case nameof(Sentence.ALC):
                     SetSentenceData((int)Sentence.ALC, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.ALC);
                     break;
                 case nameof(Sentence.ARC):
                     SetSentenceData((int)Sentence.ARC, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.ARC);
                     break;
                 case nameof(Sentence.ACN):
                     SetSentenceData((int)Sentence.ACN, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.ACN);
                     break;
                 case nameof(Sentence.HBT):
                     SetSentenceData((int)Sentence.HBT, strSentence);
-                    hasSentenceInfoUpdate = true;
+                    updatedSentences.Add(Sentence.HBT);
                     break;
             }
         }
 
-        if (hasSentenceInfoUpdate)
-            SentenceInfoUpdated?.Invoke(channelName, _stIOSSentenceData);
+        if (updatedSentences.Count > 0)
+            SentenceInfoUpdated?.Invoke(channelName, _stIOSSentenceData, updatedSentences);
     }
 
     private static string GetSentenceFormatter(string sentence)

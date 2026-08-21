@@ -13,7 +13,7 @@ public sealed class ReceiverChannelService : IReceiverChannelService
     public event Action<string>? ChannelStopped;
     public event Action<string>? ChannelDeleted;
     public event Action<string, string>? SentenceReceived;
-    public event Action<string, ST_IOSSEND_SENTENCE>? SentenceInfoUpdated;
+    public event Action<string, ST_IOSSEND_SENTENCE, IReadOnlyList<Sentence>>? SentenceInfoUpdated;
     public event Action<string, TtmTargetData>? TtmTargetUpdated;
     public event Action<string>? LogMessage;
     public event Action<int, int>? StatusChanged;
@@ -53,7 +53,7 @@ public sealed class ReceiverChannelService : IReceiverChannelService
         var receiver = _receiverFactory();
         receiver.LogMessage += msg => LogMessage?.Invoke(msg);
         receiver.SentenceReceived += (name, sentence) => SentenceReceived?.Invoke(name, sentence);
-        receiver.SentenceInfoUpdated += (name, data) => SentenceInfoUpdated?.Invoke(name, data);
+        receiver.SentenceInfoUpdated += (name, data, updatedSentences) => SentenceInfoUpdated?.Invoke(name, data, updatedSentences);
         receiver.TtmTargetUpdated += (name, target) => TtmTargetUpdated?.Invoke(name, target);
 
         var opened = receiver.Open(normalized);

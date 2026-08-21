@@ -1,6 +1,7 @@
 using NMEAReceiver.Interop;
 using NMEAReceiver.Models;
 using NMEAReceiver.Services.Interfaces;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
@@ -42,20 +43,43 @@ public sealed class IosSentenceSocketService : IIosSentenceSocketService
         }
     }
 
-    public bool SendSentenceInfo(ST_IOSSEND_SENTENCE sentenceInfo)
+    public bool SendSentenceInfo(ST_IOSSEND_SENTENCE sentenceInfo, IReadOnlyList<Sentence> updatedSentences)
     {
         lock (_sync)
         {
-            if (_udpSocket is null || _sendEndPoints.Count == 0)
+            if (_udpSocket is null || _sendEndPoints.Count == 0 || updatedSentences.Count == 0)
                 return false;
 
-            var payload = StructMarshal.ToBytes(_sentenceData);
+            using var stream = new MemoryStream();
+            foreach (var sentence in updatedSentences)
+            {
+                var body = GetSentenceBodyBytes(sentence, in _sentenceData);
+                var header = new SentenceBlockHeader { Type = (int)sentence, Length = body.Length };
+                stream.Write(StructMarshal.ToBytes(header));
+                stream.Write(body);
+            }
+
+            var payload = stream.ToArray();
             foreach (var ep in _sendEndPoints)
                 _udpSocket.Send(payload, payload.Length, ep);
 
             return true;
         }
     }
+
+    private static byte[] GetSentenceBodyBytes(Sentence sentence, in ST_IOSSEND_SENTENCE data) => sentence switch
+    {
+        Sentence.HTD => StructMarshal.ToBytes(data.m_stSentenceHTD),
+        Sentence.RSA => StructMarshal.ToBytes(data.m_stSentenceRSA),
+        Sentence.ROR => StructMarshal.ToBytes(data.m_stSentenceROR),
+        Sentence.PYDKN => StructMarshal.ToBytes(data.m_stSentencePYDKN),
+        Sentence.ALF => StructMarshal.ToBytes(data.m_stSentenceALF),
+        Sentence.ALC => StructMarshal.ToBytes(data.m_stSentenceALC),
+        Sentence.ARC => StructMarshal.ToBytes(data.m_stSentenceARC),
+        Sentence.ACN => StructMarshal.ToBytes(data.m_stSentenceACN),
+        Sentence.HBT => StructMarshal.ToBytes(data.m_stSentenceHBT),
+        _ => throw new ArgumentOutOfRangeException(nameof(sentence), sentence, "No IOS block body defined for this sentence type."),
+    };
 
     public void Dispose()
     {
