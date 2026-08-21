@@ -163,3 +163,10 @@ public struct ST_IOSSEND_SENTENCE
     public ST_ACN_SENTENCE m_stSentenceACN;
     public ST_HBT_SENTENCE m_stSentenceHBT;
 }
+
+[StructLayout(LayoutKind.Sequential, Pack = 8, CharSet = CharSet.Unicode)]
+public struct SentenceBlockHeader
+{
+    public int Type;
+    public int Length;
+}

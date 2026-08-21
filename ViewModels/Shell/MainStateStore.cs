@@ -99,7 +99,7 @@ public sealed partial class MainStateStore : ObservableObject
         channel?.AppendRawLog(sentence);
     }
 
-    private void OnSentenceInfoUpdated(string portName, ST_IOSSEND_SENTENCE data)
+    private void OnSentenceInfoUpdated(string portName, ST_IOSSEND_SENTENCE data, IReadOnlyList<Sentence> updatedSentences)
     {
         Dispatch(() => SentenceSnapshot = BuildSnapshot(portName, data));
     }
