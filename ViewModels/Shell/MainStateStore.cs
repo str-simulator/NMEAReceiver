@@ -7,14 +7,22 @@ using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Text;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace NMEAReceiver.ViewModels.Shell;
 
 public sealed partial class MainStateStore : ObservableObject
 {
     private const int MaxLogLength = 200_000;
+    private static readonly TimeSpan FlushInterval = TimeSpan.FromMilliseconds(150);
 
     private readonly IReceiverChannelService _channelService;
+    private readonly DispatcherTimer _flushTimer;
+
+    private readonly object _pendingLock = new();
+    private readonly StringBuilder _pendingLog = new();
+    private readonly Dictionary<string, StringBuilder> _pendingRawLog = new();
+    private (string PortName, ST_IOSSEND_SENTENCE Data)? _pendingSnapshot;
 
     public ObservableCollection<ChannelRowViewModel> Channels { get; } = new();
     public ObservableCollection<string> AvailableComPorts { get; } = new();
@@ -35,16 +43,59 @@ public sealed partial class MainStateStore : ObservableObject
         channelService.SentenceInfoUpdated += OnSentenceInfoUpdated;
         channelService.LogMessage += AppendLog;
         channelService.StatusChanged += OnStatusChanged;
+
+        _flushTimer = new DispatcherTimer { Interval = FlushInterval };
+        _flushTimer.Tick += (_, _) => FlushPending();
+        _flushTimer.Start();
     }
 
+    // 시리얼/UDP 수신 스레드에서 호출됨 — 반드시 가볍게 유지하고 Dispatcher를 건드리지 않아야 한다.
+    // 그렇지 않으면 빠른 데이터 소스가 UI 스레드를 앞질러서 처리되지 않은 작업이 무한히 쌓인다.
     public void AppendLog(string message)
     {
         var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}";
-        Dispatch(() =>
+        lock (_pendingLock)
+            _pendingLog.Append(line);
+    }
+
+    private void FlushPending()
+    {
+        string? pendingLog = null;
+        Dictionary<string, StringBuilder>? pendingRawLog = null;
+        (string PortName, ST_IOSSEND_SENTENCE Data)? pendingSnapshot = null;
+
+        lock (_pendingLock)
         {
-            var text = LogText + line;
+            if (_pendingLog.Length > 0)
+            {
+                pendingLog = _pendingLog.ToString();
+                _pendingLog.Clear();
+            }
+
+            if (_pendingRawLog.Count > 0)
+            {
+                pendingRawLog = new Dictionary<string, StringBuilder>(_pendingRawLog);
+                _pendingRawLog.Clear();
+            }
+
+            pendingSnapshot = _pendingSnapshot;
+            _pendingSnapshot = null;
+        }
+
+        if (pendingLog is not null)
+        {
+            var text = LogText + pendingLog;
             LogText = text.Length > MaxLogLength ? text[^MaxLogLength..] : text;
-        });
+        }
+
+        if (pendingRawLog is not null)
+        {
+            foreach (var (portName, block) in pendingRawLog)
+                Channels.FirstOrDefault(c => c.PortName == portName)?.AppendRawLogBlock(block.ToString());
+        }
+
+        if (pendingSnapshot is { } snapshot)
+            SentenceSnapshot = BuildSnapshot(snapshot.PortName, snapshot.Data);
     }
 
     private void OnChannelAdded(string portName, int portNo, int baudRate,
@@ -92,15 +143,27 @@ public sealed partial class MainStateStore : ObservableObject
         });
     }
 
+    // 아래 두 핸들러는 시리얼/UDP 수신 스레드에서 NMEA 센텐스 수신 속도로 호출되는데,
+    // 이는 WPF가 렌더링할 수 있는 속도를 훨씬 넘어설 수 있다. 이벤트마다 매번 디스패치하는
+    // 대신, 여기서는 버퍼에만 쌓아두고 FlushPending()이 일정 주기로 UI 스레드에서 한꺼번에 반영한다.
     private void OnSentenceReceived(string portName, string sentence)
     {
-        var channel = Channels.FirstOrDefault(c => c.PortName == portName);
-        channel?.AppendRawLog(sentence);
+        var line = $"[{DateTime.Now:HH:mm:ss.fff}] {sentence}{Environment.NewLine}";
+        lock (_pendingLock)
+        {
+            if (!_pendingRawLog.TryGetValue(portName, out var buffer))
+            {
+                buffer = new StringBuilder();
+                _pendingRawLog[portName] = buffer;
+            }
+            buffer.Append(line);
+        }
     }
 
     private void OnSentenceInfoUpdated(string portName, ST_IOSSEND_SENTENCE data)
     {
-        Dispatch(() => SentenceSnapshot = BuildSnapshot(portName, data));
+        lock (_pendingLock)
+            _pendingSnapshot = (portName, data);
     }
 
     private void OnStatusChanged(int openCount, int totalCount)

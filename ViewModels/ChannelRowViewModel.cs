@@ -4,7 +4,6 @@ using NMEAReceiver.Services;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Windows;
 
 namespace NMEAReceiver.ViewModels;
 
@@ -54,21 +53,16 @@ public partial class ChannelRowViewModel : ObservableObject
         UdpDestinations.CollectionChanged += OnUdpDestinationsChanged;
     }
 
-    public void AppendRawLog(string sentence)
+    // MainStateStore의 UI 스레드 flush 타이머에서 이미 포맷된(여러 줄일 수도 있는)
+    // 블록을 넘겨받아 호출되므로, 여기서는 별도의 스레드 간 디스패치가 필요 없다.
+    public void AppendRawLogBlock(string block)
     {
-        var line = $"[{DateTime.Now:HH:mm:ss.fff}] {sentence}{Environment.NewLine}";
+        if (block.Length == 0)
+            return;
 
-        void Apply()
-        {
-            var text = RawLog + line;
-            RawLog = text.Length > MaxRawLogLength ? text[^MaxRawLogLength..] : text;
-            LastUpdated = DateTime.Now.ToString("HH:mm:ss.fff");
-        }
-
-        if (Application.Current.Dispatcher.CheckAccess())
-            Apply();
-        else
-            Application.Current.Dispatcher.Invoke(Apply);
+        var text = RawLog + block;
+        RawLog = text.Length > MaxRawLogLength ? text[^MaxRawLogLength..] : text;
+        LastUpdated = DateTime.Now.ToString("HH:mm:ss.fff");
     }
 
     [RelayCommand(CanExecute = nameof(CanRemoveUdpDestination))]
