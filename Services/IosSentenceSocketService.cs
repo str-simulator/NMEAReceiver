@@ -43,18 +43,18 @@ public sealed class IosSentenceSocketService : IIosSentenceSocketService
         }
     }
 
-    public bool SendSentenceInfo(ST_IOSSEND_SENTENCE sentenceInfo, IReadOnlyList<Sentence> updatedSentences)
+    public bool SendSentenceInfo(IReadOnlyList<(Sentence Type, ST_IOSSEND_SENTENCE Data)> updates)
     {
         lock (_sync)
         {
-            if (_udpSocket is null || _sendEndPoints.Count == 0 || updatedSentences.Count == 0)
+            if (_udpSocket is null || _sendEndPoints.Count == 0 || updates.Count == 0)
                 return false;
 
             using var stream = new MemoryStream();
-            foreach (var sentence in updatedSentences)
+            foreach (var (type, data) in updates)
             {
-                var body = GetSentenceBodyBytes(sentence, in _sentenceData);
-                var header = new SentenceBlockHeader { Type = (int)sentence, Length = body.Length };
+                var body = GetSentenceBodyBytes(type, in data);
+                var header = new SentenceBlockHeader { Type = (int)type, Length = body.Length };
                 stream.Write(StructMarshal.ToBytes(header));
                 stream.Write(body);
             }

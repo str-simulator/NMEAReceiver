@@ -23,7 +23,7 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
 
     public event Action<string>? LogMessage;
     public event Action<string, string>? SentenceReceived;
-    public event Action<string, ST_IOSSEND_SENTENCE, IReadOnlyList<Sentence>>? SentenceInfoUpdated;
+    public event Action<string, IReadOnlyList<(Sentence Type, ST_IOSSEND_SENTENCE Data)>>? SentenceInfoUpdated;
     public event Action<string, TtmTargetData>? TtmTargetUpdated;
 
     public WinRs232cReceiverService(INmeaSentenceProcessorService sentenceProcessor, IIosSentenceSocketService udpSocket, int nRcvMaxLen = 8192)
@@ -35,11 +35,11 @@ public sealed class WinRs232cReceiverService : IWinRs232cReceiverService
 
         _sentenceProcessor.SentenceReceived += (ch, s) => SentenceReceived?.Invoke(ch, s);
         _sentenceProcessor.TtmTargetUpdated += (ch, target) => TtmTargetUpdated?.Invoke(ch, target);
-        _sentenceProcessor.SentenceInfoUpdated += (ch, data, updatedSentences) =>
+        _sentenceProcessor.SentenceInfoUpdated += (ch, updates) =>
         {
-            _udpSocket.SetSentenceInfo(data);
-            _udpSocket.SendSentenceInfo(data, updatedSentences);
-            SentenceInfoUpdated?.Invoke(ch, data, updatedSentences);
+            _udpSocket.SetSentenceInfo(updates[^1].Data);
+            _udpSocket.SendSentenceInfo(updates);
+            SentenceInfoUpdated?.Invoke(ch, updates);
         };
     }
 

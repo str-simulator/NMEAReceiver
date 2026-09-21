@@ -8,5 +8,5 @@ public interface IIosSentenceSocketService : IDisposable
     void InitIOSSentenceSocket(IEnumerable<(string address, int port)> endpoints);
     void SetSentenceInfo(ST_IOSSEND_SENTENCE sentenceInfo);
     ST_IOSSEND_SENTENCE GetSentenceInfo();
-    bool SendSentenceInfo(ST_IOSSEND_SENTENCE sentenceInfo, IReadOnlyList<Sentence> updatedSentences);
+    bool SendSentenceInfo(IReadOnlyList<(Sentence Type, ST_IOSSEND_SENTENCE Data)> updates);
 }
