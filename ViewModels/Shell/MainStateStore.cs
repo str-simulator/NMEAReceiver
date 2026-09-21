@@ -180,10 +180,10 @@ public sealed partial class MainStateStore : ObservableObject
         }
     }
 
-    private void OnSentenceInfoUpdated(string portName, ST_IOSSEND_SENTENCE data, IReadOnlyList<Sentence> updatedSentences)
+    private void OnSentenceInfoUpdated(string portName, IReadOnlyList<(Sentence Type, ST_IOSSEND_SENTENCE Data)> updates)
     {
         lock (_pendingLock)
-            _pendingSnapshot = (portName, data);
+            _pendingSnapshot = (portName, updates[^1].Data);
     }
 
     private void OnTtmTargetUpdated(string portName, TtmTargetData target)

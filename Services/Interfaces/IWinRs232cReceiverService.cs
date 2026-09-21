@@ -6,7 +6,7 @@ public interface IWinRs232cReceiverService : IDisposable
 {
     event Action<string>? LogMessage;
     event Action<string, string>? SentenceReceived;
-    event Action<string, ST_IOSSEND_SENTENCE, IReadOnlyList<Sentence>>? SentenceInfoUpdated;
+    event Action<string, IReadOnlyList<(Sentence Type, ST_IOSSEND_SENTENCE Data)>>? SentenceInfoUpdated;
     event Action<string, TtmTargetData>? TtmTargetUpdated;
 
     bool Open(NmeaReceiverConfig config);

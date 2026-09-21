@@ -17,7 +17,7 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
     private string _sentenceTest = string.Empty;
 
     public event Action<string, string>? SentenceReceived;
-    public event Action<string, ST_IOSSEND_SENTENCE, IReadOnlyList<Sentence>>? SentenceInfoUpdated;
+    public event Action<string, IReadOnlyList<(Sentence Type, ST_IOSSEND_SENTENCE Data)>>? SentenceInfoUpdated;
     public event Action<string, TtmTargetData>? TtmTargetUpdated;
 
     public NmeaSentenceProcessorService(int nRcvMaxLen = 8192)
@@ -71,7 +71,11 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
             ? strRecvSentence[..255]
             : strRecvSentence;
 
-        var updatedSentences = new List<Sentence>();
+        // 한 배치 안에 같은 종류(예: RPM)가 여러 번 올 수 있고, 그때마다 다른 값을 나타낼 수 있다
+        // (예: 샤프트1, 샤프트2). _stIOSSentenceData는 종류별로 슬롯이 하나뿐이라 뒤에 온 게
+        // 앞의 것을 덮어쓰므로, 타입 이름만 모아뒀다가 나중에 한 번에 스냅샷을 찍으면 앞서 들어온
+        // 값이 사라진다. 따라서 파싱한 그 순간의 구조체 스냅샷을 함께 기록해야 한다.
+        var updates = new List<(Sentence Type, ST_IOSSEND_SENTENCE Data)>();
         var ncount = strRecvSentence.Count(c => c == '$');
 
         for (var i = 0; i <= ncount; i++)
@@ -84,49 +88,49 @@ public sealed class NmeaSentenceProcessorService : INmeaSentenceProcessorService
                 case nameof(Sentence.HTD):
                     strSentence = "$" + strSentence;
                     SetSentenceData((int)Sentence.HTD, strSentence);
-                    updatedSentences.Add(Sentence.HTD);
+                    updates.Add((Sentence.HTD, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.RSA):
                     SetSentenceData((int)Sentence.RSA, strSentence);
-                    updatedSentences.Add(Sentence.RSA);
+                    updates.Add((Sentence.RSA, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.ROR):
                     SetSentenceData((int)Sentence.ROR, strSentence);
-                    updatedSentences.Add(Sentence.ROR);
+                    updates.Add((Sentence.ROR, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.PYDKN):
                     SetSentenceData((int)Sentence.PYDKN, strSentence);
-                    updatedSentences.Add(Sentence.PYDKN);
+                    updates.Add((Sentence.PYDKN, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.ALF):
                     SetSentenceData((int)Sentence.ALF, strSentence);
-                    updatedSentences.Add(Sentence.ALF);
+                    updates.Add((Sentence.ALF, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.ALC):
                     SetSentenceData((int)Sentence.ALC, strSentence);
-                    updatedSentences.Add(Sentence.ALC);
+                    updates.Add((Sentence.ALC, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.ARC):
                     SetSentenceData((int)Sentence.ARC, strSentence);
-                    updatedSentences.Add(Sentence.ARC);
+                    updates.Add((Sentence.ARC, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.ACN):
                     SetSentenceData((int)Sentence.ACN, strSentence);
-                    updatedSentences.Add(Sentence.ACN);
+                    updates.Add((Sentence.ACN, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.HBT):
                     SetSentenceData((int)Sentence.HBT, strSentence);
-                    updatedSentences.Add(Sentence.HBT);
+                    updates.Add((Sentence.HBT, _stIOSSentenceData));
                     break;
                 case nameof(Sentence.RPM):
                     SetSentenceData((int)Sentence.RPM, strSentence);
-                    updatedSentences.Add(Sentence.RPM);
+                    updates.Add((Sentence.RPM, _stIOSSentenceData));
                     break;
             }
         }
 
-        if (updatedSentences.Count > 0)
-            SentenceInfoUpdated?.Invoke(channelName, _stIOSSentenceData, updatedSentences);
+        if (updates.Count > 0)
+            SentenceInfoUpdated?.Invoke(channelName, updates);
     }
 
     private static string GetSentenceFormatter(string sentence)
